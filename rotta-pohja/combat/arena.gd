@@ -19,19 +19,46 @@ class Rival:
 		cell = start_cell
 
 
+# Something the player can do on a turn, chosen with a number key.
+class Ability:
+	var title: String
+	# Turns to wait after using it.
+	var cooldown: int
+	var turns_until_ready := 0
+	# One entry per cell the player picks, in order: how far from the player it may be, and
+	# what the player is asked for.
+	var reaches: Array[int]
+	var prompts: Array[String]
+	# (picked: Array[Vector2i], cell: Vector2i) -> bool: may `cell` be the next pick?
+	var can_pick: Callable
+	# (picked: Array[Vector2i]): does it, once every cell is picked.
+	var use: Callable
+
+	func _init(a_title: String, a_cooldown: int, a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable) -> void:
+		title = a_title
+		cooldown = a_cooldown
+		reaches = a_reaches
+		prompts = a_prompts
+		can_pick = a_can_pick
+		use = a_use
+
+
 const COLUMNS := 9
 const ROWS := 7
 
 const FLOOR_COLOR := Color(0.2, 0.22, 0.26)
 const LINE_COLOR := Color(0.45, 0.48, 0.55)
 const ACTION_COLOR := Color(0.3, 0.5, 0.35)
+const RANGE_COLOR := Color(0.23, 0.33, 0.28)
 const DESK_COLOR := Color(0.42, 0.3, 0.2)
+const PILLAR_COLOR := Color(0.1, 0.1, 0.11)
+const PAPER_COLOR := Color(0.95, 0.95, 0.9)
 const PLAYER_COLOR := Color(0.9, 0.85, 0.6)
 const RIVAL_COLOR := Color(0.85, 0.3, 0.3)
 const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 const GOAL_COLOR := Color(0.35, 0.6, 0.95)
 const DASH_WARNING_COLOR := Color(1.0, 0.85, 0.2)
-const DANGER_COLOR := Color(0.72, 0.58, 0.12)
+const DANGER_COLOR := Color(0.45, 0.1, 0.1)
 const SELECTION_COLOR := Color.WHITE
 
 const STEP_TIME := 0.2
@@ -41,6 +68,9 @@ const DASH_LENGTH := 2
 # Turns a shoved rival skips: after hitting a desk or the arena's edge, and otherwise.
 const WALL_STUN := 2
 const SHOVE_STUN := 1
+const PAPER_RANGE := 3
+const DESK_THROW_RANGE := 2
+const THROW_COOLDOWN := 3
 const NO_SIDE := -1
 const START_MOTIVATION := 3
 const NO_CELL := Vector2i(-1, -1)
@@ -63,7 +93,9 @@ const CURSOR_STEPS: Dictionary[String, Vector2i] = {
 # A stage is a scene that inherits arena.tscn and sets these.
 @export var player_start := Vector2i(0, 3)
 @export var rival_starts: Array[Vector2i] = []
+# Desks and pillars block movement. Desks can be thrown; pillars also block throws.
 @export var desk_cells: Array[Vector2i] = []
+@export var pillar_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := NO_CELL
 @export var goal_name := ""
@@ -72,6 +104,7 @@ const CURSOR_STEPS: Dictionary[String, Vector2i] = {
 
 @onready var tile_map: TileMapLayer = $TileMapLayer
 @onready var status_label: Label = $StatusLabel
+@onready var ability_label: Label = $AbilityLabel
 
 var cells: Dictionary[Vector2i, bool] = {}
 var player_cell: Vector2i
@@ -89,12 +122,26 @@ var paths: AStar2D
 # lie on every second point; the points between are seams, where no cell is selected.
 var cursor: Vector2i
 var action_range := 1
+var abilities: Array[Ability] = [
+	Ability.new("Move / Shove", 0, [1], [""], can_move_or_shove, move_or_shove),
+	Ability.new("Throw paperwork", THROW_COOLDOWN, [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
+	Ability.new("Throw desk", THROW_COOLDOWN, [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
+]
+var ability := abilities[0]
+var desk_throw := abilities[2]
+# The cells picked so far for the chosen ability.
+var picks: Array[Vector2i] = []
+# A thrown thing, drawn while it flies.
+var projectile_position: Vector2
+var projectile_color: Color
+var projectile_visible := false
 
 
 func _ready() -> void:
 	for column in COLUMNS:
 		for row in ROWS:
 			cells[Vector2i(column, row)] = true
+	desk_cells = desk_cells.duplicate()
 	player_cell = player_start
 	cursor = cell_to_point(player_cell)
 	for cell in rival_starts:
@@ -122,22 +169,50 @@ func _unhandled_input(event: InputEvent) -> void:
 	for action in CURSOR_STEPS:
 		if event.is_action_pressed(action):
 			move_cursor(CURSOR_STEPS[action])
+	for index in abilities.size():
+		if event.is_action_pressed("combat_ability_%d" % (index + 1)):
+			select_ability(index)
 	if event.is_action_pressed("ui_accept") and not is_seam(cursor) and point_to_cell(cursor) in action_cells():
-		take_turn(point_to_cell(cursor))
+		pick(point_to_cell(cursor))
 
 
-# The player moves to a free cell or shoves the rival on the cell; then the rivals act.
+# Choosing an ability again starts its picks over; one that is cooling down can't be chosen.
+func select_ability(index: int) -> void:
+	if abilities[index].turns_until_ready == 0:
+		ability = abilities[index]
+		picks.clear()
+		update_selection()
+
+
+# Picking a desk starts the desk throw with it, whatever ability was chosen.
+func pick(cell: Vector2i) -> void:
+	if picks.is_empty() and cell in desk_cells:
+		ability = desk_throw
+	picks.append(cell)
+	if picks.size() < ability.reaches.size():
+		update_selection()
+	else:
+		var picked := picks.duplicate()
+		picks.clear()
+		take_turn(ability, picked)
+
+
+# The cursor's range follows the next pick; a cursor left outside it returns to the player.
+func update_selection() -> void:
+	action_range = ability.reaches[picks.size()]
+	if not is_point_allowed(cursor):
+		cursor = cell_to_point(player_cell)
+	update_labels()
+	queue_redraw()
+
+
+# The player uses the ability on the picked cells; then the rivals act.
 # The turn is decided at once; the animation then shows its moves one after another.
 # Acting again before it ends skips the rest of it.
-func take_turn(target: Vector2i) -> void:
+func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	finish_animation()
 	animation = create_tween()
-	var rival := rival_at(target)
-	if rival:
-		shove(rival)
-	else:
-		player_cell = target
-		animation.tween_property(self, "player_position", tile_map.map_to_local(player_cell), STEP_TIME)
+	used.use.call(picked)
 	if player_cell == goal_cell:
 		end(true, "You reached the %s." % goal_name)
 	elif rivals.is_empty() and not rival_starts.is_empty():
@@ -148,13 +223,88 @@ func take_turn(target: Vector2i) -> void:
 		turns_left -= 1
 		if turns_left == 0:
 			end(true, "Your number was called.")
+	for other in abilities:
+		other.turns_until_ready = max(0, other.turns_until_ready - 1)
+	used.turns_until_ready = used.cooldown
+	select_ability(0)
 	animation.tween_callback(finish_animation)
+
+
+func can_move_or_shove(_picked: Array[Vector2i], cell: Vector2i) -> bool:
+	return is_free(cell) or rival_at(cell) != null or (cell in desk_cells and desk_throw.turns_until_ready == 0)
+
+
+func move_or_shove(picked: Array[Vector2i]) -> void:
+	var rival := rival_at(picked[0])
+	if rival:
+		shove(rival)
+	else:
+		player_cell = picked[0]
+		animation.tween_property(self, "player_position", tile_map.map_to_local(player_cell), STEP_TIME)
+
+
+func can_throw_paper(_picked: Array[Vector2i], cell: Vector2i) -> bool:
+	return rival_at(cell) != null
+
+
+func throw_paper(picked: Array[Vector2i]) -> void:
+	animate_projectile(player_cell, picked[0], PAPER_COLOR)
+	demotivate(rival_at(picked[0]))
+
+
+# First the desk, then where it lands. It can't land on a desk, a pillar, the goal or the player.
+func can_throw_desk(picked: Array[Vector2i], cell: Vector2i) -> bool:
+	if picked.is_empty():
+		return cell in desk_cells
+	return cell != player_cell and cell != goal_cell and not is_obstacle(cell)
+
+
+# The desk moves to the cell. Landing on a rival, it breaks: the rival loses motivation and
+# is stunned as if shoved into a desk.
+func throw_desk(picked: Array[Vector2i]) -> void:
+	animate_projectile(picked[0], picked[1], DESK_COLOR)
+	desk_cells.erase(picked[0])
+	var rival := rival_at(picked[1])
+	if rival:
+		rival.stunned_turns = WALL_STUN
+		demotivate(rival)
+	else:
+		desk_cells.append(picked[1])
+
+
+# A rival without motivation gives up and leaves.
+func demotivate(rival: Rival) -> void:
+	rival.motivation -= 1
+	if rival.motivation <= 0:
+		rivals.erase(rival)
+
+
+func animate_projectile(from: Vector2i, to: Vector2i, color: Color) -> void:
+	projectile_position = tile_map.map_to_local(from)
+	projectile_color = color
+	projectile_visible = true
+	animation.tween_property(self, "projectile_position", tile_map.map_to_local(to), STEP_TIME)
+	animation.tween_callback(func(): projectile_visible = false)
+
+
+# Pillars block throws; desks and rivals don't. A line that runs along the border between
+# two cells is blocked only when both are pillars.
+func has_line_of_sight(from: Vector2i, to: Vector2i) -> bool:
+	var start := tile_map.map_to_local(from)
+	var end := tile_map.map_to_local(to)
+	var aside := (end - start).orthogonal().normalized()
+	var steps := distance(from, to)
+	for step in range(1, steps):
+		var point := start.lerp(end, float(step) / steps)
+		if tile_map.local_to_map(point + aside) in pillar_cells and tile_map.local_to_map(point - aside) in pillar_cells:
+			return false
+	return true
 
 
 # Pushes the rival one cell straight away from the player and stuns it. If something is
 # behind it, it stays and loses motivation; hitting a desk or the arena's edge stuns longer.
 # A rival behind it loses motivation too: both slide back one cell if there is room,
-# otherwise that rival is stunned as well. A rival without motivation gives up and leaves.
+# otherwise that rival is stunned as well.
 func shove(rival: Rival) -> void:
 	var side := side_between(player_cell, rival.cell) as TileSet.CellNeighbor
 	var behind := tile_map.get_neighbor_cell(rival.cell, side)
@@ -163,10 +313,8 @@ func shove(rival: Rival) -> void:
 	if is_free(behind):
 		move_rival(rival, behind)
 		return
-	rival.motivation -= 1
 	var bumped: Array[Rival] = [rival]
 	if other:
-		other.motivation -= 1
 		var far := tile_map.get_neighbor_cell(behind, side)
 		if is_free(far):
 			move_rival(other, far)
@@ -180,8 +328,8 @@ func shove(rival: Rival) -> void:
 		animation.tween_property(hit, "position", hit.position + bump, STEP_TIME / 2)
 		animation.tween_property(hit, "position", hit.position, STEP_TIME / 2)
 	for hit in [rival, other]:
-		if hit and hit.motivation <= 0:
-			rivals.erase(hit)
+		if hit:
+			demotivate(hit)
 
 
 # A stunned rival skips its turn. On every third turn it dashes along the line fixed when the
@@ -234,13 +382,26 @@ func dash_cells(rival: Rival) -> Array[Vector2i]:
 	return result
 
 
+# The cells where ending the turn loses the form: next to a rival that acts normally, and on
+# the line and around the end of a rival that dashes. A stunned rival is harmless.
+func danger_cells() -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for rival in rivals:
+		if rival.stunned_turns > 0:
+			continue
+		if rival.turns_until_dash == 1:
+			result.append_array(dash_cells(rival))
+			result.append_array(dash_grab_cells(rival))
+		else:
+			result.append_array(neighbors(rival.cell))
+	return result
+
+
 # The cells next to where the rival's dash would end now, apart from the line itself.
 func dash_grab_cells(rival: Rival) -> Array[Vector2i]:
 	var line := dash_cells(rival)
-	if rival.dash_side == NO_SIDE:
-		return []
 	var last: Vector2i = rival.cell if line.is_empty() else line[-1]
-	return neighbors(last).filter(func(cell): return cell not in line and cell != rival.cell and cell not in desk_cells)
+	return neighbors(last).filter(func(cell): return cell not in line and cell != rival.cell and not is_obstacle(cell))
 
 
 # The side of cell `from` that cell `to` lies on, or NO_SIDE if they are not neighbors.
@@ -258,7 +419,7 @@ func cell_id(cell: Vector2i) -> int:
 func build_paths() -> AStar2D:
 	var result := AStar2D.new()
 	for cell in cells:
-		if cell not in desk_cells:
+		if not is_obstacle(cell):
 			result.add_point(cell_id(cell), tile_map.map_to_local(cell))
 	for cell in cells:
 		for neighbor in neighbors(cell):
@@ -284,6 +445,17 @@ func end(player_won: bool, text: String) -> void:
 	end_text = text
 
 
+func update_labels() -> void:
+	status_label.text = end_text if announced else objective_text()
+	var entries: Array[String] = []
+	for index in abilities.size():
+		var entry := "[%d] %s" % [index + 1, abilities[index].title]
+		if abilities[index].turns_until_ready > 0:
+			entry += " (%d)" % abilities[index].turns_until_ready
+		entries.append("> " + entry if abilities[index] == ability else entry)
+	ability_label.text = "   ".join(entries) + "\n" + ability.prompts[picks.size()]
+
+
 func objective_text() -> String:
 	var parts: Array[String] = []
 	if cells.has(goal_cell):
@@ -301,10 +473,12 @@ func finish_animation() -> void:
 	player_position = tile_map.map_to_local(player_cell)
 	for rival in rivals:
 		rival.position = tile_map.map_to_local(rival.cell)
-	status_label.text = end_text if finished else objective_text()
+	projectile_visible = false
+	var announce := finished and not announced
+	announced = finished
+	update_labels()
 	queue_redraw()
-	if finished and not announced:
-		announced = true
+	if announce:
 		combat_finished.emit(won)
 
 
@@ -361,14 +535,27 @@ func neighbors(cell: Vector2i) -> Array[Vector2i]:
 	return tile_map.get_surrounding_cells(cell).filter(func(neighbor): return cells.has(neighbor))
 
 
-# No desk, rival or player on it.
+func is_obstacle(cell: Vector2i) -> bool:
+	return cell in desk_cells or cell in pillar_cells
+
+
+# Inside the arena with no desk, pillar, rival or player on it.
 func is_free(cell: Vector2i) -> bool:
-	return cells.has(cell) and cell not in desk_cells and rival_at(cell) == null and cell != player_cell
+	return cells.has(cell) and not is_obstacle(cell) and rival_at(cell) == null and cell != player_cell
 
 
-# The cells the player can act on: move to a free one, shove the rival on one.
+# The cells the next pick of the chosen ability reaches: in range and in sight of the player.
+func range_cells() -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell in cells:
+		if distance(player_cell, cell) <= ability.reaches[picks.size()] and has_line_of_sight(player_cell, cell):
+			result.append(cell)
+	return result
+
+
+# The cells the player can pick next for the chosen ability.
 func action_cells() -> Array[Vector2i]:
-	return neighbors(player_cell).filter(func(cell): return is_free(cell) or rival_at(cell) != null)
+	return range_cells().filter(func(cell): return ability.can_pick.call(picks, cell))
 
 
 # Number of hex steps between two cells; neighbors are 1 apart.
@@ -380,25 +567,27 @@ func distance(a: Vector2i, b: Vector2i) -> int:
 
 func _draw() -> void:
 	var actions := action_cells()
-	# Where a dash next turn takes the form: one color, whatever else the cell is.
-	var danger: Array[Vector2i] = []
-	for rival in rivals:
-		danger.append_array(dash_cells(rival))
-		danger.append_array(dash_grab_cells(rival))
+	var in_range := range_cells()
+	var danger := danger_cells()
 	for cell in cells:
-		var corners := hex_corners(cell)
 		var color := FLOOR_COLOR
-		if cell in desk_cells:
+		if cell in pillar_cells:
+			color = PILLAR_COLOR
+		elif cell in desk_cells:
 			color = DESK_COLOR
-		elif cell in actions:
-			color = ACTION_COLOR
 		elif cell in danger:
 			color = DANGER_COLOR
-		draw_colored_polygon(corners, color)
-		draw_polyline(corners, LINE_COLOR, 2.0)
-		# A cell the player can act on stays green; the danger shows as a smaller hex inside it.
-		if cell in actions and cell in danger:
-			draw_colored_polygon(hex_corners(cell, 0.6), DANGER_COLOR)
+		# What the player can pick is green, the rest of the ability's range a darker green:
+		# the whole cell on plain floor, a smaller hex inside a desk or a dangerous cell.
+		var mark := color
+		if cell in actions:
+			mark = ACTION_COLOR
+		elif cell in in_range and not is_obstacle(cell):
+			mark = RANGE_COLOR
+		draw_colored_polygon(hex_corners(cell), mark if color == FLOOR_COLOR else color)
+		draw_polyline(hex_corners(cell), LINE_COLOR, 2.0)
+		if color != FLOOR_COLOR and mark != color:
+			draw_colored_polygon(hex_corners(cell, 0.6), mark)
 	if cells.has(goal_cell):
 		draw_polyline(hex_corners(goal_cell), GOAL_COLOR, 6.0)
 	for rival in rivals:
@@ -415,6 +604,10 @@ func _draw() -> void:
 		if rival.turns_until_dash == 1:
 			draw_arc(rival.position, 26.0, 0.0, TAU, 32, DASH_WARNING_COLOR, 4.0)
 	draw_circle(player_position, 20.0, PLAYER_COLOR)
+	for cell in picks:
+		draw_polyline(hex_corners(cell, 0.8), SELECTION_COLOR, 3.0)
+	if projectile_visible:
+		draw_circle(projectile_position, 12.0, projectile_color)
 	if is_seam(cursor):
 		draw_circle(point_position(cursor), 6.0, SELECTION_COLOR)
 	else:

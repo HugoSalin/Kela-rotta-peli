@@ -4,7 +4,7 @@ extends SceneTree
 #   timeout 30 godot --headless --path rotta-pohja --script res://combat/tests/arena_test.gd
 
 const Arena := preload("res://combat/arena.gd")
-const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept"}
+const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept", "1": "combat_ability_1", "2": "combat_ability_2", "3": "combat_ability_3"}
 const FAR := Vector2i(8, 6)
 const STAGES := preload("res://combat/loop_prototype.gd").STAGES
 
@@ -67,6 +67,9 @@ func run() -> void:
 	test_queue_number()
 	test_dash()
 	test_shove()
+	test_danger()
+	test_throw_paper()
+	test_throw_desk()
 	test_stages_can_be_won()
 	await test_loop()
 	print("%d checks, %d failed" % [checks, fails])
@@ -336,7 +339,123 @@ func test_shove() -> void:
 	check("no move onto a desk, no turn", [arena.player_cell, arena.rivals[0].turns_until_dash], [Vector2i(4, 3), 3])
 
 
-# Tries every sequence of player actions, so it fails when a stage has become impossible.
+func test_danger() -> void:
+	setup(Vector2i(0, 0), 1, [Vector2i(4, 3)])
+	var rival := arena.rivals[0]
+	check("danger is every cell next to a rival", arena.danger_cells().size(), 6)
+	rival.stunned_turns = 1
+	check("a stunned rival is harmless", arena.danger_cells(), [])
+	rival.stunned_turns = 0
+	rival.turns_until_dash = 1
+	rival.dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	check("a dashing rival endangers its line and end, not its own neighbors", [arena.danger_cells().size(), Vector2i(4, 2) in arena.danger_cells(), Vector2i(4, 5) in arena.danger_cells()], [7, false, true])
+	rival.dash_side = arena.NO_SIDE
+	check("a dash without a line endangers the rival's neighbors", arena.danger_cells().size(), 6)
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	press("DWE")
+	check("moving next to a rival, as the danger cells say, loses", [Vector2i(5, 4) in arena.danger_cells(), results], [false, []])
+	press("WWE")
+	check("and it does", results, [false])
+
+
+func test_throw_paper() -> void:
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 2), Vector2i(4, 0)])
+	arena.rivals[0].stunned_turns = 99
+	arena.rivals[1].stunned_turns = 99
+	press("2")
+	check("key 2 chooses the throw: range 3, only rivals in range", [arena.ability.title, arena.action_range, arena.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
+	check("the ability line marks it", arena.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk\nPick a rival.")
+	press("1")
+	check("key 1 goes back", [arena.ability.title, arena.action_range], ["Move / Shove", 1])
+	press("2WWWWWWE")
+	check("a throw costs motivation, takes the turn and goes back to moving", [arena.rivals[0].motivation, arena.rivals[0].stunned_turns, arena.ability.title, arena.abilities[1].turns_until_ready], [2, 98, "Move / Shove", 3])
+	check("the cursor returns from outside the range", arena.cursor, arena.cell_to_point(Vector2i(4, 5)))
+	check("the ability line shows the cooldown", arena.ability_label.text, "> [1] Move / Shove   [2] Throw paperwork (3)   [3] Throw desk\n")
+	press("2")
+	check("it can't be chosen while cooling down", arena.ability.title, "Move / Shove")
+	var waits: Array[int] = []
+	for keys in ["WWE", "SSE", "WWE"]:
+		press(keys)
+		waits.append(arena.abilities[1].turns_until_ready)
+	check("the cooldown counts down each turn", waits, [2, 1, 0])
+	press("2")
+	check("then it is ready", arena.ability.title, "Throw paperwork")
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	arena.pillar_cells.assign([Vector2i(4, 3)])
+	press("2")
+	check("a pillar blocks the throw", arena.action_cells(), [])
+	arena.pillar_cells.clear()
+	arena.desk_cells.assign([Vector2i(4, 3)])
+	check("a desk does not", arena.action_cells(), [Vector2i(4, 2)])
+	check("the range is the cells within 3 in sight", [Vector2i(4, 2) in arena.range_cells(), Vector2i(6, 5) in arena.range_cells(), Vector2i(4, 1) in arena.range_cells()], [true, true, false])
+	arena.desk_cells.clear()
+	arena.pillar_cells.assign([Vector2i(4, 3)])
+	check("not those behind a pillar", Vector2i(4, 2) in arena.range_cells(), false)
+
+	setup(Vector2i(4, 5), 1, [Vector2i(5, 3)])
+	arena.pillar_cells.assign([Vector2i(5, 4)])
+	press("2")
+	check("a throw passes along the border of one pillar", arena.action_cells(), [Vector2i(5, 3)])
+	arena.pillar_cells.assign([Vector2i(5, 4), Vector2i(4, 4)])
+	check("but not between two", arena.action_cells(), [])
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
+	arena.rival_starts.assign([Vector2i(4, 3)])
+	arena.rivals[0].motivation = 1
+	press("2WWWWE")
+	check("a throw that takes the last motivation wins", [arena.rivals.size(), results], [0, [true]])
+
+
+func test_throw_desk() -> void:
+	setup(Vector2i(4, 5), 1, [FAR])
+	arena.rivals[0].stunned_turns = 99
+	press("3")
+	check("no desk next to the player: nothing to pick", arena.action_cells(), [])
+	arena.desk_cells.assign([Vector2i(4, 4)])
+	arena.pillar_cells.assign([Vector2i(5, 4)])
+	arena.goal_cell = Vector2i(3, 4)
+	check("the desk next to the player can be picked", [arena.action_range, arena.action_cells()], [1, [Vector2i(4, 4)]])
+	press("WWE")
+	var landing := arena.action_cells()
+	check("then where it lands, within 2, no turn yet", [arena.picks, arena.action_range, arena.rivals[0].stunned_turns], [[Vector2i(4, 4)], 2, 99])
+	check("not on the player, a desk, a pillar or the goal", [Vector2i(4, 5) in landing, Vector2i(4, 4) in landing, Vector2i(5, 4) in landing, Vector2i(3, 4) in landing], [false, false, false, false])
+	check("not behind a pillar, but behind a desk", [Vector2i(6, 4) in landing, Vector2i(4, 3) in landing], [false, true])
+	press("3")
+	check("choosing it again starts the picks over", [arena.picks, arena.action_range], [[], 1])
+	press("WWEWWE")
+	check("the desk lands on the picked cell and the turn passes", [arena.desk_cells, arena.rivals[0].stunned_turns, arena.abilities[2].turns_until_ready, arena.ability.title], [[Vector2i(4, 3)], 98, 3, "Move / Shove"])
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
+	arena.desk_cells.assign([Vector2i(4, 4)])
+	press("3WWEWWE")
+	check("a desk thrown at a rival breaks, demotivates and stuns it", [arena.desk_cells, arena.rivals[0].motivation, arena.rivals[0].stunned_turns], [[], 2, 1])
+
+	setup(Vector2i(4, 5), 1, [FAR])
+	arena.rivals[0].stunned_turns = 99
+	arena.desk_cells.assign([Vector2i(4, 4)])
+	check("while moving, a desk next to the player can be picked", Vector2i(4, 4) in arena.action_cells(), true)
+	press("WWE")
+	check("picking it starts the desk throw with it", [arena.ability.title, arena.picks, arena.rivals[0].stunned_turns], ["Throw desk", [Vector2i(4, 4)], 99])
+	press("1")
+	arena.desk_throw.turns_until_ready = 2
+	check("not while the throw cools down", Vector2i(4, 4) in arena.action_cells(), false)
+
+	setup(Vector2i(4, 3), 1, [FAR])
+	arena.rivals[0].stunned_turns = 99
+	arena.pillar_cells.assign([Vector2i(4, 2)])
+	press("WWE")
+	check("no move onto a pillar", [arena.player_cell, arena.rivals[0].stunned_turns], [Vector2i(4, 3), 99])
+	setup(Vector2i(4, 4), 1, [Vector2i(4, 3)])
+	arena.pillar_cells.assign([Vector2i(4, 2)])
+	press("WWE")
+	check("a shove into a pillar is a shove into a wall", [arena.rivals[0].cell, arena.rivals[0].motivation, arena.rivals[0].stunned_turns], [Vector2i(4, 3), 2, 1])
+
+
+# Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.
+# The throws are left out: with them the search takes too long, and a stage that can be won
+# without them can be won.
 func test_stages_can_be_won() -> void:
 	for scene in STAGES:
 		if arena:
@@ -350,9 +469,11 @@ func test_stages_can_be_won() -> void:
 			var next := []
 			for state in frontier:
 				restore(state)
-				for target in arena.action_cells():
+				for cell in arena.action_cells():
+					if cell in arena.desk_cells:
+						continue
 					restore(state)
-					arena.take_turn(target)
+					arena.pick(cell)
 					if arena.won:
 						can_win = true
 					elif not arena.finished and not seen.has(snapshot()):
@@ -363,17 +484,22 @@ func test_stages_can_be_won() -> void:
 
 
 func snapshot() -> Array:
-	return [arena.player_cell, arena.turns_left, arena.rivals.map(func(rival): return [rival.cell, rival.turns_until_dash, rival.motivation, rival.stunned_turns, rival.dash_side])]
+	return [arena.player_cell, arena.turns_left, arena.desk_cells.duplicate(), arena.abilities.map(func(ability): return ability.turns_until_ready), arena.rivals.map(func(rival): return [rival.cell, rival.turns_until_dash, rival.motivation, rival.stunned_turns, rival.dash_side])]
 
 
 func restore(state: Array) -> void:
 	arena.finished = false
 	arena.won = false
-	arena.announced = true
+	arena.announced = false
 	arena.player_cell = state[0]
 	arena.turns_left = state[1]
+	arena.desk_cells.assign(state[2])
+	for index in arena.abilities.size():
+		arena.abilities[index].turns_until_ready = state[3][index]
+	arena.ability = arena.abilities[0]
+	arena.picks.clear()
 	arena.rivals.clear()
-	for values in state[2]:
+	for values in state[4]:
 		var rival := Arena.Rival.new(values[0])
 		rival.turns_until_dash = values[1]
 		rival.motivation = values[2]
