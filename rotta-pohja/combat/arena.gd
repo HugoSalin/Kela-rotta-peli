@@ -24,14 +24,14 @@ const ROWS := 7
 
 const FLOOR_COLOR := Color(0.2, 0.22, 0.26)
 const LINE_COLOR := Color(0.45, 0.48, 0.55)
-const REACHABLE_COLOR := Color(0.3, 0.5, 0.35)
-const SHOVE_COLOR := Color(0.6, 0.4, 0.2)
+const ACTION_COLOR := Color(0.3, 0.5, 0.35)
 const DESK_COLOR := Color(0.42, 0.3, 0.2)
 const PLAYER_COLOR := Color(0.9, 0.85, 0.6)
 const RIVAL_COLOR := Color(0.85, 0.3, 0.3)
 const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 const GOAL_COLOR := Color(0.35, 0.6, 0.95)
 const DASH_WARNING_COLOR := Color(1.0, 0.85, 0.2)
+const DANGER_COLOR := Color(0.72, 0.58, 0.12)
 const SELECTION_COLOR := Color.WHITE
 
 const STEP_TIME := 0.2
@@ -185,8 +185,9 @@ func shove(rival: Rival) -> void:
 
 
 # A stunned rival skips its turn. On every third turn it dashes along the line fixed when the
-# warning started, and takes the form if the player is on it. Otherwise it takes the form if
-# it is next to the player, or else steps along the shortest path to the player.
+# warning started, and takes the form if the player is on the line or next to where it ends.
+# Otherwise it takes the form if it is next to the player, or else steps along the shortest
+# path to the player.
 func take_rival_turns() -> void:
 	paths = build_paths()
 	for rival in rivals:
@@ -202,6 +203,9 @@ func take_rival_turns() -> void:
 					return
 				move_rival(rival, cell)
 			rival.dash_side = NO_SIDE
+			if distance(rival.cell, player_cell) == 1:
+				end(false, "A rival took your form.")
+				return
 			continue
 		if distance(rival.cell, player_cell) == 1:
 			end(false, "A rival took your form.")
@@ -217,8 +221,8 @@ func move_rival(rival: Rival, cell: Vector2i) -> void:
 		animation.tween_property(rival, "position", tile_map.map_to_local(cell), STEP_TIME)
 
 
-# The cells the rival's dash would cross now: it stops before a desk, a rival or the edge,
-# and on the player.
+# The cells the rival's dash would cross now: it stops before a desk, a rival or the edge.
+# The player doesn't shorten it, so the preview stays whole while the player stands on it.
 func dash_cells(rival: Rival) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	var cell := rival.cell
@@ -227,9 +231,16 @@ func dash_cells(rival: Rival) -> Array[Vector2i]:
 		if cell != player_cell and not is_free(cell):
 			break
 		result.append(cell)
-		if cell == player_cell:
-			break
 	return result
+
+
+# The cells next to where the rival's dash would end now, apart from the line itself.
+func dash_grab_cells(rival: Rival) -> Array[Vector2i]:
+	var line := dash_cells(rival)
+	if rival.dash_side == NO_SIDE:
+		return []
+	var last: Vector2i = rival.cell if line.is_empty() else line[-1]
+	return neighbors(last).filter(func(cell): return cell not in line and cell != rival.cell and cell not in desk_cells)
 
 
 # The side of cell `from` that cell `to` lies on, or NO_SIDE if they are not neighbors.
@@ -369,20 +380,32 @@ func distance(a: Vector2i, b: Vector2i) -> int:
 
 func _draw() -> void:
 	var actions := action_cells()
+	# Where a dash next turn takes the form: one color, whatever else the cell is.
+	var danger: Array[Vector2i] = []
+	for rival in rivals:
+		danger.append_array(dash_cells(rival))
+		danger.append_array(dash_grab_cells(rival))
 	for cell in cells:
 		var corners := hex_corners(cell)
 		var color := FLOOR_COLOR
 		if cell in desk_cells:
 			color = DESK_COLOR
 		elif cell in actions:
-			color = SHOVE_COLOR if rival_at(cell) else REACHABLE_COLOR
+			color = ACTION_COLOR
+		elif cell in danger:
+			color = DANGER_COLOR
 		draw_colored_polygon(corners, color)
 		draw_polyline(corners, LINE_COLOR, 2.0)
+		# A cell the player can act on stays green; the danger shows as a smaller hex inside it.
+		if cell in actions and cell in danger:
+			draw_colored_polygon(hex_corners(cell, 0.6), DANGER_COLOR)
 	if cells.has(goal_cell):
 		draw_polyline(hex_corners(goal_cell), GOAL_COLOR, 6.0)
 	for rival in rivals:
-		for cell in dash_cells(rival):
-			draw_colored_polygon(hex_corners(cell), Color(DASH_WARNING_COLOR, 0.45))
+		var line := dash_cells(rival)
+		if not line.is_empty():
+			draw_line(tile_map.map_to_local(rival.cell), tile_map.map_to_local(line[-1]), DASH_WARNING_COLOR, 6.0)
+			draw_circle(tile_map.map_to_local(line[-1]), 9.0, DASH_WARNING_COLOR)
 	for rival in rivals:
 		draw_circle(rival.position, 20.0, STUNNED_COLOR if rival.stunned_turns > 0 else RIVAL_COLOR)
 		# One Z for each turn the rival still skips.
@@ -399,9 +422,9 @@ func _draw() -> void:
 
 
 # Closed outline: the first corner is repeated at the end.
-func hex_corners(cell: Vector2i) -> PackedVector2Array:
+func hex_corners(cell: Vector2i, scale := 1.0) -> PackedVector2Array:
 	var center := tile_map.map_to_local(cell)
-	var half := Vector2(tile_map.tile_set.tile_size) / 2
+	var half := Vector2(tile_map.tile_set.tile_size) / 2 * scale
 	return [
 		center + Vector2(-half.x, 0),
 		center + Vector2(-half.x / 2, -half.y),

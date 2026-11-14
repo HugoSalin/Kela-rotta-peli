@@ -242,6 +242,7 @@ func test_dash() -> void:
 	for c in [
 		["past a player who steps off the line", Vector2i(4, 3), "DSE", [], Vector2i(4, 2), []],
 		["onto a player on the line", Vector2i(4, 3), "WWE", [], Vector2i(4, 1), [false]],
+		["and grabs a player next to where it ends", Vector2i(4, 3), "DWE", [], Vector2i(4, 2), [false]],
 		["up to a desk", Vector2i(4, 5), "DSE", [Vector2i(4, 2)], Vector2i(4, 1), []],
 	]:
 		setup(c[1], 1, [Vector2i(4, 0)])
@@ -250,6 +251,14 @@ func test_dash() -> void:
 		arena.rivals[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 		press(c[2])
 		check("a dash goes %s" % c[0], [arena.rivals[0].cell, results], [c[4], c[5]])
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 0)])
+	arena.rivals[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	check("the grab preview is the cells around the dash's end", [arena.dash_cells(arena.rivals[0]), arena.dash_grab_cells(arena.rivals[0]).size(), Vector2i(4, 3) in arena.dash_grab_cells(arena.rivals[0]), Vector2i(4, 1) in arena.dash_grab_cells(arena.rivals[0])], [[Vector2i(4, 1), Vector2i(4, 2)], 5, true, false])
+
+	setup(Vector2i(4, 1), 1, [Vector2i(4, 0)])
+	arena.rivals[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	check("a player on the line does not shorten the preview", [arena.dash_cells(arena.rivals[0]), arena.dash_grab_cells(arena.rivals[0]).size()], [[Vector2i(4, 1), Vector2i(4, 2)], 5])
 
 	setup(Vector2i(4, 4), 1, [Vector2i(4, 1)])
 	arena.desk_cells.assign([Vector2i(4, 2)])
@@ -300,6 +309,7 @@ func test_shove() -> void:
 	setup(Vector2i(4, 3), 1, [Vector2i(4, 2), FAR])
 	arena.rival_starts.assign([Vector2i(4, 2), FAR])
 	arena.desk_cells.assign([Vector2i(4, 1)])
+	arena.rivals[1].stunned_turns = 99
 	press("WWE")
 	press("WWE")
 	check("a rival can be shoved until its motivation is gone", [arena.rivals.size(), arena.rivals[0].motivation], [2, 1])
@@ -318,7 +328,7 @@ func test_shove() -> void:
 	press("WWE")
 	check("a shoved rival waits with its dash and keeps the line", [arena.rivals[0].cell, arena.rivals[0].turns_until_dash, arena.rivals[0].dash_side, results], [Vector2i(4, 1), 1, TileSet.CELL_NEIGHBOR_BOTTOM_SIDE, []])
 	press("DE")
-	check("then it dashes along it", arena.rivals[0].cell, Vector2i(4, 3))
+	check("then it dashes along it and grabs the player beside its end", [arena.rivals[0].cell, results], [Vector2i(4, 3), [false]])
 
 	setup(Vector2i(4, 3), 1, [FAR])
 	arena.desk_cells.assign([Vector2i(4, 2)])
