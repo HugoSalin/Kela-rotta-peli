@@ -8,6 +8,7 @@ signal combat_finished(won: bool)
 class Rival:
 	var cell: Vector2i
 	var position: Vector2
+	var turns_until_dash := DASH_EVERY
 
 	func _init(start_cell: Vector2i) -> void:
 		cell = start_cell
@@ -22,9 +23,12 @@ const REACHABLE_COLOR := Color(0.3, 0.5, 0.35)
 const PLAYER_COLOR := Color(0.9, 0.85, 0.6)
 const RIVAL_COLOR := Color(0.85, 0.3, 0.3)
 const GOAL_COLOR := Color(0.35, 0.6, 0.95)
+const DASH_WARNING_COLOR := Color(1.0, 0.85, 0.2)
 const SELECTION_COLOR := Color.WHITE
 
 const STEP_TIME := 0.2
+# On every third turn a rival dashes: it acts twice.
+const DASH_EVERY := 3
 const NO_CELL := Vector2i(-1, -1)
 
 const CURSOR_STEPS: Dictionary[String, Vector2i] = {
@@ -116,16 +120,22 @@ func take_turn(target: Vector2i) -> void:
 	animation.tween_callback(finish_animation)
 
 
-# A rival next to the player grabs the form; otherwise it steps closer.
+# Each action of a rival: next to the player it grabs the form, otherwise it steps closer.
 func take_rival_turns() -> void:
 	for rival in rivals:
-		if distance(rival.cell, player_cell) == 1:
-			end(false, "A rival took your form.")
-			return
-		for cell in neighbors(rival.cell):
-			if rival_at(cell) == null and distance(cell, player_cell) < distance(rival.cell, player_cell):
-				rival.cell = cell
-		animation.tween_property(rival, "position", tile_map.map_to_local(rival.cell), STEP_TIME)
+		rival.turns_until_dash -= 1
+		var actions := 1
+		if rival.turns_until_dash == 0:
+			actions = 2
+			rival.turns_until_dash = DASH_EVERY
+		for action in actions:
+			if distance(rival.cell, player_cell) == 1:
+				end(false, "A rival took your form.")
+				return
+			for cell in neighbors(rival.cell):
+				if rival_at(cell) == null and distance(cell, player_cell) < distance(rival.cell, player_cell):
+					rival.cell = cell
+			animation.tween_property(rival, "position", tile_map.map_to_local(rival.cell), STEP_TIME)
 
 
 func end(player_won: bool, text: String) -> void:
@@ -232,6 +242,8 @@ func _draw() -> void:
 		draw_polyline(hex_corners(goal_cell), GOAL_COLOR, 6.0)
 	for rival in rivals:
 		draw_circle(rival.position, 20.0, RIVAL_COLOR)
+		if rival.turns_until_dash == 1:
+			draw_arc(rival.position, 26.0, 0.0, TAU, 32, DASH_WARNING_COLOR, 4.0)
 	draw_circle(player_position, 20.0, PLAYER_COLOR)
 	if is_seam(cursor):
 		draw_circle(point_position(cursor), 6.0, SELECTION_COLOR)

@@ -64,6 +64,7 @@ func run() -> void:
 	test_cursor()
 	test_turns()
 	test_queue_number()
+	test_dash()
 	await test_loop()
 	print("%d checks, %d failed" % [checks, fails])
 	quit(1 if fails else 0)
@@ -213,3 +214,26 @@ func test_loop() -> void:
 	await create_timer(0.1).timeout
 	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [1, "You got the job."])
 	loop.free()
+
+
+func test_dash() -> void:
+	setup(Vector2i(0, 3), 1, [Vector2i(8, 3)])
+	var steps: Array[int] = []
+	var warnings: Array[bool] = []
+	for keys in ["WWE", "SSE", "WWE", "SSE", "WWE"]:
+		var before := arena.rivals[0].cell
+		press(keys)
+		steps.append(arena.distance(before, arena.rivals[0].cell))
+		warnings.append(arena.rivals[0].turns_until_dash == 1)
+	check("a rival moves two cells on every third turn", steps, [1, 1, 2, 1, 1])
+	check("the warning shows on the turn before a dash", warnings, [false, true, false, false, true])
+
+	setup(Vector2i(4, 3), 1, [Vector2i(7, 3)])
+	arena.rivals[0].turns_until_dash = 1
+	press("WWE")
+	check("a dash from three cells away ends next to the player", [arena.distance(arena.rivals[0].cell, arena.player_cell), arena.finished], [1, false])
+
+	setup(Vector2i(4, 3), 1, [Vector2i(6, 3)])
+	arena.rivals[0].turns_until_dash = 1
+	press("WWE")
+	check("a dash from two cells away steps and grabs", [arena.distance(arena.rivals[0].cell, arena.player_cell), results], [1, [false]])
