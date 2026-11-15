@@ -43,23 +43,20 @@ func take_turn() -> void:
 	aim()
 
 
-# A rival on the line loses motivation. It moves over the cells of its line that are free,
-# also those a rival just gave up.
+# A rival on the line loses motivation. It moves over the cells of its line without a rival,
+# also those a rival just gave up, and takes the form on the line and next to where it ends.
 func dash() -> void:
 	turns_until_dash = dash_every
 	var line := dash_cells()
+	var start := cell
 	dash_side = HexGrid.NO_SIDE
 	for step in line:
-		if step == arena.player.cell:
-			grab()
-			return
 		var rival := arena.rival_at(step)
 		if rival:
 			rival.demotivate()
-		if arena.is_free(step):
+		if arena.rival_at(step) == null:
 			arena.move(self, step)
-	if is_next_to_player():
-		grab()
+	arena.threaten(line + arena.grid.neighbors(cell).filter(func(near): return near not in line and near != start and not arena.is_obstacle(near)))
 
 
 func hunt() -> void:
@@ -76,7 +73,7 @@ func aim() -> void:
 
 
 func grab() -> void:
-	arena.end(false, "A rival took your form.")
+	arena.take_form()
 
 
 func is_next_to_player() -> bool:
@@ -86,7 +83,7 @@ func is_next_to_player() -> bool:
 # ---- Its dash ----
 
 # The cells its dash would cross now: it stops before an obstacle or the edge. Rivals and
-# the player don't shorten it, so the preview shows the whole line.
+# the player don't shorten it, so the warning shows the whole line.
 func dash_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	var step := cell
@@ -96,30 +93,6 @@ func dash_cells() -> Array[Vector2i]:
 			break
 		result.append(step)
 	return result
-
-
-# Where its dash would end now: the last cell of the line without a rival or with one that
-# the dash makes give up, or its own cell.
-func dash_end() -> Vector2i:
-	var end := cell
-	for step in dash_cells():
-		var rival := arena.rival_at(step)
-		if rival == null or rival.motivation == 1:
-			end = step
-	return end
-
-
-# The cells next to where its dash would end now, apart from the line itself.
-func grab_cells() -> Array[Vector2i]:
-	var line := dash_cells()
-	return arena.grid.neighbors(dash_end()).filter(func(near): return near not in line and near != cell and not arena.is_obstacle(near))
-
-
-# Only a dash is marked: its line and around its end. A stunned rival is harmless.
-func danger_cells() -> Array[Vector2i]:
-	if stunned_turns > 0 or turns_until_dash != 1:
-		return []
-	return dash_cells() + grab_cells()
 
 
 # ---- What the player does to it ----

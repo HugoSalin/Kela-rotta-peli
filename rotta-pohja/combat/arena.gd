@@ -42,7 +42,17 @@ var finished := false
 var won := false
 var end_text := ""
 var announced := false
+# The cells without an obstacle, connected; null until asked for after an obstacle changed.
 var paths: AStar2D
+# The entities that still act before the player's next action.
+var waiting: Array[Entity] = []
+# A rehearsal plays coming turns to see what they do: nothing is reported, the game can't
+# end, and the board is put back afterwards.
+var rehearsing := false
+var forecast: Array[Vector2i] = []
+# The cells where a dash takes the form before the player's next action. After the
+# player's action these are the dashes of this round; after the round, those of the next.
+var danger: Array[Vector2i] = []
 
 
 func _ready() -> void:
@@ -57,9 +67,9 @@ func _ready() -> void:
 	player = Player.new(player_start)
 	add(player)
 	# A rival that dashes on the first turn shows its line from the start.
-	paths = build_paths()
 	for rival in rivals():
 		rival.aim()
+	danger = danger_cells()
 	turns_left = queue_turns
 	view.animation_finished.connect(announce)
 	get_viewport().size_changed.connect(center_in_viewport)
@@ -83,22 +93,35 @@ func center_in_viewport() -> void:
 func add(entity: Entity) -> void:
 	entity.arena = self
 	entities.append(entity)
-	entity_added.emit(entity)
+	obstacles_changed(entity)
+	report(entity_added, [entity])
 
 
 func move(entity: Entity, to: Vector2i) -> void:
 	var from := entity.cell
 	entity.cell = to
-	entity_moved.emit(entity, from, to)
+	obstacles_changed(entity)
+	report(entity_moved, [entity, from, to])
 
 
 func block(entity: Entity, toward: Vector2i) -> void:
-	entity_blocked.emit(entity, toward)
+	report(entity_blocked, [entity, toward])
 
 
 func remove(entity: Entity) -> void:
 	entities.erase(entity)
-	entity_removed.emit(entity)
+	obstacles_changed(entity)
+	report(entity_removed, [entity])
+
+
+func obstacles_changed(entity: Entity) -> void:
+	if entity.obstacle:
+		paths = null
+
+
+func report(change: Signal, arguments: Array) -> void:
+	if not rehearsing:
+		change.emit.callv(arguments)
 
 
 # ---- Asking about the board ----
@@ -148,46 +171,83 @@ func has_line_of_sight(from: Vector2i, to: Vector2i) -> bool:
 	return true
 
 
-func danger_cells() -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	for entity in entities:
-		result.append_array(entity.danger_cells())
-	return result
-
+# ---- Turns ----
 
 # ---- Turns ----
 
-# The player uses the ability on the picked cells; then every other entity acts, one after
-# another, so one's action can change what the next one does.
+# The player uses the ability on the picked cells; then every other entity acts.
 # The turn is decided at once; the view then shows its changes one after another.
 func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	turn_started.emit()
 	var had_rivals := not rivals().is_empty()
 	used.use.call(picked)
-	entity_acted.emit(player)
+	start_round()
+	danger = danger_cells()
+	report(entity_acted, [player])
 	if player.cell == goal_cell:
 		end(true, "You reached the %s." % goal_name)
 	elif rivals().is_empty() and had_rivals:
 		end(true, "Every rival gave up.")
 	else:
-		paths = build_paths()
-		for entity in entities.duplicate():
-			if finished:
-				break
-			if entity != player and entity in entities:
-				entity.take_turn()
-				entity_acted.emit(entity)
+		play_round()
+	waiting.clear()
 	if not finished and turns_left > 0:
 		turns_left -= 1
 		if turns_left == 0:
 			end(true, "Your number was called.")
 	player.cool_down(used)
+	danger = danger_cells()
 	turn_ended.emit()
+
+
+func start_round() -> void:
+	waiting = entities.filter(func(entity): return entity != player)
+
+
+# Those waiting act one after another, so one's action can change what the next one does.
+func play_round() -> void:
+	while not waiting.is_empty() and not finished:
+		var entity: Entity = waiting.pop_front()
+		if entity in entities:
+			entity.take_turn()
+			report(entity_acted, [entity])
+
+
+# A rival's move takes the form on these cells.
+func threaten(cells: Array[Vector2i]) -> void:
+	if rehearsing:
+		forecast.append_array(cells)
+	elif player.cell in cells:
+		take_form()
+
+
+func take_form() -> void:
+	end(false, "A rival took your form.")
+
+
+# Finds the danger by playing the turns still to come, so it shows what the rules will do.
+func danger_cells() -> Array[Vector2i]:
+	var board := entities.duplicate()
+	var states := board.map(func(entity): return entity.state())
+	var still_waiting := waiting.duplicate()
+	rehearsing = true
+	forecast = []
+	if waiting.is_empty():
+		start_round()
+	play_round()
+	rehearsing = false
+	entities = board
+	for index in board.size():
+		board[index].restore(states[index])
+	waiting = still_waiting
+	return forecast
 
 
 # ---- The ending ----
 
 func end(player_won: bool, text: String) -> void:
+	if rehearsing:
+		return
 	finished = true
 	won = player_won
 	end_text = text
@@ -215,7 +275,7 @@ func cell_id(cell: Vector2i) -> int:
 	return cell.x + cell.y * HexGrid.COLUMNS
 
 
-# The cells without an obstacle, each connected to its neighbors; rebuilt every turn.
+# The cells without an obstacle, each connected to its neighbors.
 func build_paths() -> AStar2D:
 	var result := AStar2D.new()
 	for cell in grid.cells:
@@ -232,6 +292,8 @@ func build_paths() -> AStar2D:
 # stands in the way. If the others leave no way, the path as if they weren't there, so the
 # mover queues up behind them. Its own cell if there is no path at all.
 func path_step(mover: Entity, to: Vector2i) -> Vector2i:
+	if paths == null:
+		paths = build_paths()
 	var in_the_way := entities.filter(func(entity): return entity.solid and not entity.obstacle and entity != mover and entity.cell != to)
 	for avoided in [in_the_way, []]:
 		for entity in avoided:

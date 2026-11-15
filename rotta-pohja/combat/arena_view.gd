@@ -106,7 +106,7 @@ func _on_entity_removed(entity: Entity) -> void:
 # The danger cells, the obstacles and every entity's look as the rules have them now. During
 # a turn they are shown once the animation gets here, so each action's effect is seen in its turn.
 func show_state() -> void:
-	var danger := arena.danger_cells()
+	var danger := arena.danger
 	var obstacles: Array[Vector2i] = []
 	var looks: Dictionary[Entity, Look] = {}
 	for entity in arena.entities:

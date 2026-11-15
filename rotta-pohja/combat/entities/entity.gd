@@ -59,6 +59,17 @@ func take_turn() -> void:
 	pass
 
 
-# The cells where ending the turn loses the form to it.
-func danger_cells() -> Array[Vector2i]:
-	return []
+# ---- Its state ----
+
+# Its variables as they are now, to put it back as it was.
+func state() -> Dictionary:
+	var result := {}
+	for property in get_property_list():
+		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			result[property.name] = get(property.name)
+	return result
+
+
+func restore(saved: Dictionary) -> void:
+	for property in saved:
+		set(property, saved[property])

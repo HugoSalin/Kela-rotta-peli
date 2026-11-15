@@ -254,7 +254,7 @@ func test_dash() -> void:
 
 	for c in [
 		["past a player who steps off the line", Vector2i(4, 3), "DSE", [], Vector2i(4, 2), []],
-		["onto a player on the line", Vector2i(4, 3), "WWE", [], Vector2i(4, 1), [false]],
+		["onto a player on the line", Vector2i(4, 3), "WWE", [], Vector2i(4, 2), [false]],
 		["and grabs a player next to where it ends", Vector2i(4, 3), "DWE", [], Vector2i(4, 2), [false]],
 		["up to a desk", Vector2i(4, 5), "DSE", [Vector2i(4, 2)], Vector2i(4, 1), []],
 	]:
@@ -265,13 +265,11 @@ func test_dash() -> void:
 		press(c[2])
 		check("a dash goes %s" % c[0], [arena.rivals()[0].cell, results], [c[4], c[5]])
 
-	setup(Vector2i(4, 5), [Vector2i(4, 0)])
-	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
-	check("the grab preview is the cells around the dash's end", [arena.rivals()[0].dash_cells(), arena.rivals()[0].grab_cells().size(), Vector2i(4, 3) in arena.rivals()[0].grab_cells(), Vector2i(4, 1) in arena.rivals()[0].grab_cells()], [[Vector2i(4, 1), Vector2i(4, 2)], 5, true, false])
-
 	setup(Vector2i(4, 1), [Vector2i(4, 0)])
+	arena.rivals()[0].turns_until_dash = 1
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
-	check("a player on the line does not shorten the preview", [arena.rivals()[0].dash_cells(), arena.rivals()[0].grab_cells().size()], [[Vector2i(4, 1), Vector2i(4, 2)], 5])
+	check("a player on the line does not shorten the preview", [arena.danger_cells().size(), Vector2i(4, 2) in arena.danger_cells(), Vector2i(4, 3) in arena.danger_cells()], [7, true, true])
+	check("and the preview leaves the board as it was", [arena.rivals()[0].cell, arena.rivals()[0].turns_until_dash, arena.rivals()[0].dash_side, arena.finished], [Vector2i(4, 0), 1, TileSet.CELL_NEIGHBOR_BOTTOM_SIDE, false])
 
 	setup(Vector2i(4, 4), [Vector2i(4, 1)])
 	set_desks([Vector2i(4, 2)])
@@ -516,10 +514,10 @@ func test_several_rivals() -> void:
 	var dasher := arena.rivals()[1]
 	dasher.turns_until_dash = 1
 	dasher.dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
-	var ends := []
-	arena.entity_acted.connect(func(entity): if entity is Player or entity is Rival: ends.append([dasher.dash_cells(), dasher.dash_end()]))
+	var previews := []
+	arena.entity_acted.connect(func(entity): if entity is Player: previews.append([Vector2i(5, 0) in arena.danger_cells(), Vector2i(5, 2) in arena.danger_cells()]))
 	press("SSE")
-	check("a rival that steps onto a dash line keeps the line whole and moves its end, in its own turn", ends.slice(0, 2), [[[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 2)], [[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 1)]])
+	check("once the player has acted, the preview shows a dash stopped by a rival that steps onto its line first", previews, [[true, false]])
 	check("the dash stops before it and costs it motivation", [dasher.cell, arena.rivals()[0].cell, arena.rivals()[0].motivation], [Vector2i(4, 1), Vector2i(4, 2), 2])
 
 	setup(Vector2i(8, 6), [Vector2i(4, 0), Vector2i(4, 1)])
@@ -535,9 +533,26 @@ func test_several_rivals() -> void:
 	arena.rivals()[1].motivation = 1
 	arena.rivals()[0].turns_until_dash = 1
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
-	check("the preview ends on the cell of a rival the dash makes give up", arena.rivals()[0].dash_end(), Vector2i(4, 2))
+	check("the preview ends on the cell of a rival the dash makes give up", Vector2i(5, 2) in arena.danger_cells(), true)
 	press("E")
 	check("and the dash ends there", [arena.rivals().size(), arena.rivals()[0].cell], [1, Vector2i(4, 2)])
+
+	setup(Vector2i(0, 0), [Vector2i(4, 3), Vector2i(4, 1)])
+	for rival in arena.rivals():
+		rival.turns_until_dash = 1
+		rival.dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	var preview := arena.danger_cells()
+	press("E")
+	check("the preview knows that a rival on a dash line dashes away first", [Vector2i(5, 3) in preview, arena.rivals()[1].cell], [true, Vector2i(4, 3)])
+
+	setup(Vector2i(0, 0), [Vector2i(4, 1), Vector2i(6, 2)])
+	arena.rivals()[0].turns_until_dash = 1
+	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	arena.rivals()[1].turns_until_dash = 1
+	arena.rivals()[1].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_LEFT_SIDE
+	preview = arena.danger_cells()
+	press("E")
+	check("and that a rival dashing onto the end of another's line stops that dash short", [Vector2i(6, 3) in preview, arena.rivals()[1].cell], [true, Vector2i(5, 2)])
 
 	setup(Vector2i(4, 5), [Vector2i(4, 2)])
 	arena.rivals()[0].turns_until_dash = 1
