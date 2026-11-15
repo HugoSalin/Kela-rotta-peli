@@ -560,29 +560,30 @@ func test_several_rivals() -> void:
 func test_intern() -> void:
 	arena.free()
 	arena = load("res://combat/arena.tscn").instantiate()
+	arena.player_start = Vector2i(4, 6)
 	arena.rival_starts.assign([FAR])
-	arena.intern_starts.assign([Vector2i(8, 0)])
+	arena.intern_starts.assign([Vector2i(4, 1)])
 	root.add_child(arena)
-	check("a stage's interns come after its rivals and join their countdowns", arena.rivals().map(func(rival): return [rival is Intern, rival.turns_until_dash]), [[false, 3], [true, 4]])
-
-	setup(Vector2i(4, 6), [])
-	var intern := Intern.new(Vector2i(4, 1))
-	arena.add(intern)
-	arena.view.finish()
+	var intern := arena.rivals()[1]
+	arena.rivals()[0].stunned_turns = 99
+	check("a stage's intern dashes on the first turn and shows its line from the start", [intern is Intern, intern.turns_until_dash, intern.dash_cells()], [true, 1, [Vector2i(4, 2), Vector2i(4, 3)]])
 	press("E")
-	check("an intern walks two cells a turn", intern.cell, Vector2i(4, 3))
+	check("an intern dashes every turn, with the next line fixed after each dash", [intern.cell, intern.turns_until_dash, intern.dash_cells()], [Vector2i(4, 3), 1, [Vector2i(4, 4), Vector2i(4, 5)]])
 	press("E")
-	check("and stops next to the player", [intern.cell, results], [Vector2i(4, 5), []])
-	press("E")
-	check("where it takes the form", results, [false])
+	check("and takes the form beside the end of its dash", [intern.cell, arena.finished, arena.won], [Vector2i(4, 5), true, false])
 
 	setup(Vector2i(4, 6), [])
 	intern = Intern.new(Vector2i(4, 4))
 	arena.add(intern)
-	intern.stunned_turns = 99
 	arena.view.finish()
-	press("2WWWWE")
-	press("2WWWWE")
+	press("AWE")
+	check("an intern without a line stays where it is: it can't walk", [intern.cell, intern.dash_side != HexGrid.NO_SIDE], [Vector2i(4, 4), true])
+	intern.stunned_turns = 99
+	press("2")
+	arena.selection.pick(intern.cell)
+	arena.selection.select(1)
+	arena.selection.pick(intern.cell)
+	arena.view.finish()
 	check("an intern gives up after two throws", [arena.rivals().size(), results], [0, [true]])
 
 

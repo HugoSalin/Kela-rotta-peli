@@ -56,15 +56,20 @@ func _ready() -> void:
 		add_staggered(Intern.new(cell))
 	player = Player.new(player_start)
 	add(player)
+	# A rival that dashes on the first turn shows its line from the start.
+	paths = build_paths()
+	for rival in rivals():
+		rival.aim()
 	turns_left = queue_turns
 	view.animation_finished.connect(announce)
 	get_viewport().size_changed.connect(center_in_viewport)
 	center_in_viewport()
 
 
-# Rivals dash on different turns: each starts its countdown a turn later than the one before.
+# Rivals dash on different turns: each starts its countdown a turn later than the one
+# before, within how often it dashes.
 func add_staggered(rival: Rival) -> void:
-	rival.turns_until_dash += rivals().size() % Rival.DASH_EVERY
+	rival.turns_until_dash += rivals().size() % rival.dash_every
 	add(rival)
 
 

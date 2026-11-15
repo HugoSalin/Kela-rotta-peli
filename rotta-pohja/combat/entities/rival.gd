@@ -3,16 +3,17 @@ extends Entity
 
 # A rival rat that hunts the player's form.
 
-# On every third turn a rival dashes: up to DASH_LENGTH cells in a straight line.
-const DASH_EVERY := 3
+# A dash goes up to DASH_LENGTH cells in a straight line.
 const DASH_LENGTH := 2
 const START_MOTIVATION := 3
 const COLOR := Color(0.85, 0.3, 0.3)
 const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 
-var turns_until_dash := DASH_EVERY
+# It dashes on every third turn.
+var dash_every := 3
+var turns_until_dash := dash_every
 var motivation := START_MOTIVATION
-# How many cells it walks on a turn.
+# How many cells it walks on a turn without a dash.
 var speed := 1
 var body_color := COLOR
 # How many of its next turns it skips.
@@ -23,9 +24,9 @@ var dash_side := HexGrid.NO_SIDE
 
 # ---- Its turn ----
 
-# A stunned rival skips its turn. On every third turn it dashes along the line fixed when the
-# warning started, through other rivals, and takes the form if the player is on the line or
-# next to where it ends.
+# A stunned rival skips its turn. When its countdown ends it dashes along the line fixed
+# when the warning started, through other rivals, and takes the form if the player is on the
+# line or next to where it ends.
 # Otherwise it takes the form if it is next to the player, or else walks along the shortest
 # path to the player, as far as its speed and the free cells allow.
 func take_turn() -> void:
@@ -39,12 +40,13 @@ func take_turn() -> void:
 		grab()
 	else:
 		hunt()
+	aim()
 
 
 # A rival on the line loses motivation. It moves over the cells of its line that are free,
 # also those a rival just gave up.
 func dash() -> void:
-	turns_until_dash = DASH_EVERY
+	turns_until_dash = dash_every
 	var line := dash_cells()
 	dash_side = HexGrid.NO_SIDE
 	for step in line:
@@ -65,6 +67,10 @@ func hunt() -> void:
 		var step := arena.path_step(self, arena.player.cell)
 		if arena.is_free(step):
 			arena.move(self, step)
+
+
+# Before a turn on which it dashes, the line is fixed: the direction of its next path step.
+func aim() -> void:
 	if turns_until_dash == 1:
 		dash_side = arena.grid.side_between(cell, arena.path_step(self, arena.player.cell))
 
@@ -125,7 +131,7 @@ func stun(turns: int) -> void:
 # A dash it warns of is called off, and its countdown starts over.
 func cancel_dash() -> void:
 	if has_warning():
-		turns_until_dash = DASH_EVERY
+		turns_until_dash = dash_every
 		dash_side = HexGrid.NO_SIDE
 
 
