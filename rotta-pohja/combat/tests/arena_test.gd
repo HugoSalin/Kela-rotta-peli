@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Tests the combat arena by pressing keys. Run from the repository root; exits with 1 on a failure:
-#   timeout 30 godot --headless --path rotta-pohja --script res://combat/tests/arena_test.gd
+#   timeout 40 godot --headless --path rotta-pohja --script res://combat/tests/arena_test.gd
 
 const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept", "1": "combat_ability_1", "2": "combat_ability_2", "3": "combat_ability_3", "4": "combat_ability_4"}
 const FAR := Vector2i(8, 6)
