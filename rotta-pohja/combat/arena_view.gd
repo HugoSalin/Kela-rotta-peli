@@ -47,6 +47,7 @@ class Drawn:
 @onready var status_label: Label = $StatusLabel
 @onready var ability_bar: HBoxContainer = $AbilityBar
 @onready var prompt_label: Label = $PromptLabel
+@onready var cards: CardPanel = $"../Cards"
 
 var drawn: Dictionary[Entity, Drawn] = {}
 # The danger cells and the obstacles' cells as they stood at this point of the animation.
@@ -70,14 +71,21 @@ func _ready() -> void:
 	arena.ready.connect(build_ability_bar)
 
 
-# A button for each ability; clicking it chooses the ability, as its number key does.
+# A button for each ability; clicking it chooses the ability, as its number key does. The
+# "?" after it shows the ability's card.
 func build_ability_bar() -> void:
 	for index in arena.player.abilities.size():
-		var button := Button.new()
-		button.focus_mode = Control.FOCUS_NONE
-		button.pressed.connect(selection.select.bind(index))
-		ability_bar.add_child(button)
-		ability_buttons.append(button)
+		ability_buttons.append(add_button("", selection.select.bind(index)))
+		add_button("?", func(): cards.show_cards([arena.player.abilities[index].card()]))
+
+
+func add_button(text: String, on_pressed: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(on_pressed)
+	ability_bar.add_child(button)
+	return button
 
 
 func _process(_delta: float) -> void:

@@ -178,6 +178,8 @@ func test_cards() -> void:
 	check("cards follow each other", [cards.visible, cards.title_label.text, cards.text_label.text], [true, "Second", "Two."])
 	cards._input(confirm)
 	check("the last one closes the panel", cards.visible, false)
+	arena.view.ability_bar.get_child(7).pressed.emit()
+	check("the ? after an ability shows its card", [cards.visible, cards.title_label.text, cards.text_label.text], [true, "Dash", arena.player.abilities[3].description])
 
 
 func test_cursor() -> void:

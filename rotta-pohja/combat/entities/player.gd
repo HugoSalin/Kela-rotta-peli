@@ -12,12 +12,12 @@ const DASH_COOLDOWN := 3
 
 # ---- Abilities ----
 
-var desk_throw := Ability.new("Throw desk", 0, [1, 1], [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk)
+var desk_throw := Ability.new("Throw desk", "Pick a desk next to you, then a cell next to you where it lands. Use it to open a way or to close one. On a rival the desk breaks: the rival is stunned for 2 turns and loses 1 motivation.", 0, [1, 1], [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk)
 var abilities: Array[Ability] = [
-	Ability.new("Move / Shove", 0, [0], [1], [""], can_move_or_shove, move_or_shove, false, desk_throw),
-	Ability.new("Throw paperwork", 0, [PAPER_MIN_RANGE], [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
+	Ability.new("Move / Shove", "Move to a free cell next to you, or pick your own cell to wait. Pick a rival next to you to shove it: it moves back a cell and is stunned for a turn. With something behind it, it stays, is stunned for 2 turns and loses 1 motivation. A shoved office chair rolls away. Picking a desk next to you starts Throw desk.", 0, [0], [1], [""], can_move_or_shove, move_or_shove, false, desk_throw),
+	Ability.new("Throw paperwork", "Pick a rival 2 or 3 cells away that you can see; pillars block the view. It loses 1 motivation, and a dash it warns of is called off.", 0, [PAPER_MIN_RANGE], [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
 	desk_throw,
-	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], [DASH_REACH], ["Pick where you land."], can_dash, dash, true),
+	Ability.new("Dash", "Land on a free cell two away in a straight line. You can't cross a desk, a chair or a pillar. A rival you go through loses 1 motivation. Ready again after %d turns." % DASH_COOLDOWN, DASH_COOLDOWN, [DASH_REACH], [DASH_REACH], ["Pick where you land."], can_dash, dash, true),
 ]
 
 

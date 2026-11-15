@@ -4,6 +4,8 @@ extends RefCounted
 # Something the player can do on a turn, chosen with a number key.
 
 var title: String
+# What it does, in words for the player.
+var description: String
 # Turns to wait after using it.
 var cooldown: int
 var turns_until_ready := 0
@@ -22,8 +24,9 @@ var hands_over_to: Ability
 var use: Callable
 
 
-func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable, a_straight := false, a_hands_over_to: Ability = null) -> void:
+func _init(a_title: String, a_description: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable, a_straight := false, a_hands_over_to: Ability = null) -> void:
 	title = a_title
+	description = a_description
 	cooldown = a_cooldown
 	min_reaches = a_min_reaches
 	reaches = a_reaches
@@ -32,3 +35,7 @@ func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reache
 	use = a_use
 	straight = a_straight
 	hands_over_to = a_hands_over_to
+
+
+func card() -> Card:
+	return Card.new(title, description)
