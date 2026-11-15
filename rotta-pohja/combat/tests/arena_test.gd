@@ -814,7 +814,7 @@ func test_loop() -> void:
 	check("a win goes to the next stage", [loop.stage, loop.arena.objective_text(), loop.arena.rivals().size(), loop.floor_label.text], [1, "Your number is called in 8 turns. Or make every rival give up.", 2, "Floor 2 of %d" % stages.size()])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
-	check("a loss on the second stage goes back to the first", loop.stage, 0)
+	check("a loss on the second stage starts it again", [loop.stage, loop.arena.finished], [1, false])
 	for stage in stages.size():
 		loop.arena.combat_finished.emit(true)
 		await create_timer(0.1).timeout

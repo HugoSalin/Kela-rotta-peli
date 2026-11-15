@@ -1,7 +1,7 @@
 extends Node
 
 # Temporary: plays the combat stages one after another, going up a floor after each win and
-# back to the first floor after a loss. The platformer will launch combat instead.
+# starting the same floor again after a loss. The platformer will launch combat instead.
 
 const STAGE_FOLDER := "res://combat/stages/"
 
@@ -38,11 +38,9 @@ func start_stage() -> void:
 
 func _on_combat_finished(won: bool) -> void:
 	await get_tree().create_timer(pause).timeout
-	if not won:
-		stage = 0
-	elif stage == stages.size() - 1:
+	if won and stage == stages.size() - 1:
 		floor_label.text = "You got the job."
 		return
-	else:
+	if won:
 		stage += 1
 	start_stage()
