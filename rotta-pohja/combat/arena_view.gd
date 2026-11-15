@@ -186,6 +186,9 @@ func _draw() -> void:
 	if grid.has(arena.goal_cell):
 		draw_polyline(hex_corners(grid.map_to_local(arena.goal_cell)), GOAL_COLOR, 6.0)
 	for entity in drawn:
+		if entity.shape == Entity.Shape.MARK and drawn[entity].visible:
+			draw_mark(entity)
+	for entity in drawn:
 		draw_warning(entity)
 	for entity in drawn:
 		if entity.shape == Entity.Shape.CIRCLE and drawn[entity].visible:
@@ -239,10 +242,19 @@ func draw_warning(entity: Entity) -> void:
 		draw_circle(end, 9.0, WARNING_COLOR)
 
 
+func draw_mark(entity: Entity) -> void:
+	draw_polyline(hex_corners(drawn[entity].position, 0.85), drawn[entity].look.color, 5.0)
+	draw_label(entity, drawn[entity].position)
+
+
+func draw_label(entity: Entity, center: Vector2) -> void:
+	draw_string(ThemeDB.fallback_font, center + Vector2(-20.0, 8.0), drawn[entity].look.label, HORIZONTAL_ALIGNMENT_CENTER, 40.0, 22, SELECTION_COLOR)
+
+
 func draw_piece(entity: Entity, center: Vector2) -> void:
 	var look := drawn[entity].look
 	draw_circle(center, entity.radius, look.color)
-	draw_string(ThemeDB.fallback_font, center + Vector2(-20.0, 8.0), look.label, HORIZONTAL_ALIGNMENT_CENTER, 40.0, 22, SELECTION_COLOR)
+	draw_label(entity, center)
 	for index in look.pips:
 		draw_circle(center + Vector2((index - (look.pips - 1) / 2.0) * 10.0, -28.0), 3.5, SELECTION_COLOR)
 	if look.warned:

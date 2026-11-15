@@ -23,6 +23,7 @@ signal combat_finished(won: bool)
 @export var intern_starts: Array[Vector2i] = []
 @export var desk_cells: Array[Vector2i] = []
 @export var pillar_cells: Array[Vector2i] = []
+@export var elevator_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
 @export var goal_name := ""
@@ -63,6 +64,8 @@ func _ready() -> void:
 		add(Desk.new(cell))
 	for cell in pillar_cells:
 		add(Pillar.new(cell))
+	for cell in elevator_cells:
+		add(Elevator.new(cell))
 	for cell in rival_starts:
 		add_staggered(Rival.new(cell))
 	for cell in intern_starts:

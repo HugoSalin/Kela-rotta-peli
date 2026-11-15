@@ -517,6 +517,7 @@ func test_several_rivals() -> void:
 	root.add_child(arena)
 	check("a stage's rivals start their dash countdowns a turn apart", arena.rivals().map(func(rival): return rival.turns_until_dash), [3, 4, 5, 3])
 	test_intern()
+	test_elevator()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -605,6 +606,27 @@ func test_intern() -> void:
 	arena.selection.pick(intern.cell)
 	arena.view.finish()
 	check("an intern gives up after two throws", [arena.rivals().size(), results], [0, [true]])
+
+
+func test_elevator() -> void:
+	setup(Vector2i(0, 0), [])
+	var elevator := Elevator.new(Vector2i(4, 3))
+	arena.add(elevator)
+	var counts := []
+	for turn in 4:
+		press("E")
+		counts.append([elevator.turns_until_rival, arena.rivals().size()])
+	check("an elevator brings a rival every fourth turn", counts, [[3, 0], [2, 0], [1, 0], [4, 1]])
+	check("the rival steps out of the elevator and acts from the next turn", arena.rivals()[0].cell, Vector2i(4, 3))
+	arena.rivals()[0].stunned_turns = 99
+	for turn in 4:
+		press("E")
+	check("it waits while something stands on it", [elevator.turns_until_rival, arena.rivals().size()], [0, 1])
+	arena.rivals()[0].cell = Vector2i(8, 6)
+	arena.danger_cells()
+	check("the preview brings no rival", arena.rivals().size(), 1)
+	press("E")
+	check("the next one comes once it is free", [elevator.turns_until_rival, arena.rivals().size()], [4, 2])
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.

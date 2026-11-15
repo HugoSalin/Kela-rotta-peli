@@ -3,7 +3,7 @@ extends RefCounted
 
 # Anything on the board. A kind extends this and sets what differs.
 
-enum Shape { HEX, CIRCLE }
+enum Shape { HEX, CIRCLE, MARK }
 
 # ---- On the board ----
 
@@ -19,7 +19,8 @@ var throwable := false
 # ---- How it is shown ----
 
 var motion := Motion.new()
-# A hex fills the cell; a circle has `radius`.
+# A hex fills the cell; a circle has `radius`; a mark is an outline on the cell's floor,
+# for what others can stand on.
 var shape := Shape.CIRCLE
 var radius := 20.0
 
