@@ -20,7 +20,7 @@ func check(what: String, actual, expected) -> void:
 		print("FAIL %s | expected %s | actual %s" % [what, expected, actual])
 
 
-func setup(player: Vector2i, reach: int, rival_cells: Array) -> void:
+func setup(player: Vector2i, rival_cells: Array) -> void:
 	if arena:
 		arena.free()
 	arena = load("res://combat/arena.tscn").instantiate()
@@ -29,7 +29,6 @@ func setup(player: Vector2i, reach: int, rival_cells: Array) -> void:
 	results.clear()
 	arena.player.cell = player
 	arena.selection.point = arena.selection.cell_to_point(player)
-	arena.selection.reach = reach
 	for cell in rival_cells:
 		arena.add(Rival.new(cell))
 	arena.view.finish()
@@ -72,7 +71,8 @@ func press(keys: String) -> void:
 
 # The cursor's position relative to the player's start cell, and whether it is on a seam.
 func cursor_after(player: Vector2i, reach: int, keys: String) -> Array:
-	setup(player, reach, [])
+	setup(player, [])
+	arena.selection.ability.reaches[0] = reach
 	press(keys)
 	return [arena.selection.point_position(arena.selection.point) - arena.grid.map_to_local(player), arena.selection.is_seam(arena.selection.point)]
 
@@ -102,7 +102,7 @@ func run() -> void:
 
 
 func test_grid() -> void:
-	setup(Vector2i(4, 3), 1, [])
+	setup(Vector2i(4, 3), [])
 	var wrong_points := 0
 	var wrong_distances := 0
 	for cell in arena.grid.cells:
@@ -116,12 +116,12 @@ func test_grid() -> void:
 	check("neighbors not at distance 1", wrong_distances, 0)
 	check("distance corner to corner", arena.grid.distance(Vector2i(0, 0), Vector2i(8, 6)), 10)
 	check("cells to pick in the middle: the neighbors and the player's own", arena.selection.action_cells().size(), 7)
-	setup(Vector2i(0, 0), 1, [])
+	setup(Vector2i(0, 0), [])
 	check("cells to pick in a corner", arena.selection.action_cells().size(), 3)
 
 
 func test_layout() -> void:
-	setup(Vector2i(4, 3), 1, [])
+	setup(Vector2i(4, 3), [])
 	press("3")
 	var shown := arena.view.bounds()
 	var text_bottom := arena.view.ability_label.position.y + arena.view.ability_label.get_minimum_size().y
@@ -160,34 +160,33 @@ func test_cursor() -> void:
 
 
 func test_turns() -> void:
-	setup(Vector2i(4, 3), 1, [FAR])
+	setup(Vector2i(4, 3), [FAR])
 	press("DE")
 	check("confirm on a seam: no move, no turn", [arena.player.cell, arena.rivals()[0].cell], [Vector2i(4, 3), FAR])
 	press("AE")
 	check("confirm on own cell: no move, the turn passes", [arena.player.cell, arena.grid.distance(arena.rivals()[0].cell, FAR), arena.rivals()[0].turns_until_dash], [Vector2i(4, 3), 1, 2])
-	setup(Vector2i(4, 3), 3, [FAR])
-	press("DDE")
-	check("confirm on a cell out of reach", arena.player.cell, Vector2i(4, 3))
+	press("2DDE")
+	check("confirm on a cell in reach that can't be picked: no turn", [arena.selection.point, arena.selection.ability.title, arena.rivals()[0].turns_until_dash], [arena.selection.cell_to_point(Vector2i(6, 3)), "Throw paperwork", 2])
 
-	setup(Vector2i(4, 3), 1, [FAR])
+	setup(Vector2i(4, 3), [FAR])
 	press("DWE")
 	check("move to a neighbor", arena.player.cell, Vector2i(5, 2))
 	check("cursor on the player after a move", arena.selection.point, arena.selection.cell_to_point(Vector2i(5, 2)))
 	check("rival steps one closer", arena.grid.distance(arena.rivals()[0].cell, Vector2i(5, 2)), arena.grid.distance(FAR, Vector2i(5, 2)) - 1)
 	check("not finished", [arena.finished, results], [false, []])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 3), [Vector2i(4, 2)])
 	press("WWE")
 	check("confirm on a rival's cell: no move, no turn", [arena.player.cell, arena.finished], [Vector2i(4, 3), false])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(6, 3)])
+	setup(Vector2i(4, 3), [Vector2i(6, 3)])
 	press("DSE")
 	check("ending a turn next to a rival loses", [arena.player.cell, arena.finished, results], [Vector2i(5, 3), true, [false]])
 	check("loss text", arena.view.status_label.text, "A rival took your form.")
 	press("AWE")
 	check("no input after the end", [arena.player.cell, arena.selection.point, results], [Vector2i(5, 3), arena.selection.cell_to_point(Vector2i(5, 3)), [false]])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(6, 3)])
+	setup(Vector2i(4, 3), [Vector2i(6, 3)])
 	for key in "DSE":
 		press_one(key)
 	check("the ending waits for the animation", [arena.finished, results, arena.view.status_label.text], [true, [], ""])
@@ -196,7 +195,7 @@ func test_turns() -> void:
 	arena.view.finish()
 	check("the ending is announced once", results, [false])
 
-	setup(Vector2i(7, 3), 1, [Vector2i(5, 3)])
+	setup(Vector2i(7, 3), [Vector2i(5, 3)])
 	arena.goal_cell = Vector2i(8, 3)
 	arena.goal_name = "HR desk"
 	arena.view.finish()
@@ -206,7 +205,7 @@ func test_turns() -> void:
 	check("win text", arena.view.status_label.text, "You reached the HR desk.")
 	check("rival does not act after a win", arena.rivals()[0].cell, Vector2i(5, 3))
 
-	setup(Vector2i(0, 3), 1, [Vector2i(6, 2), Vector2i(6, 3)])
+	setup(Vector2i(0, 3), [Vector2i(6, 2), Vector2i(6, 3)])
 	var shared := 0
 	for keys in ["WWE", "SSE", "WWE", "SSE"]:
 		press(keys)
@@ -218,7 +217,7 @@ func test_turns() -> void:
 
 
 func test_queue_number() -> void:
-	setup(Vector2i(4, 3), 1, [])
+	setup(Vector2i(4, 3), [])
 	arena.turns_left = 2
 	arena.view.finish()
 	check("objective text for the queue", arena.view.status_label.text, "Your number is called in 2 turns.")
@@ -227,14 +226,14 @@ func test_queue_number() -> void:
 	press("SSE")
 	check("the queue number wins", [arena.finished, results, arena.view.status_label.text], [true, [true], "Your number was called."])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(6, 3)])
+	setup(Vector2i(4, 3), [Vector2i(6, 3)])
 	arena.turns_left = 1
 	press("DSE")
 	check("a grab on the last turn still loses", results, [false])
 
 
 func test_dash() -> void:
-	setup(Vector2i(0, 3), 1, [Vector2i(8, 3)])
+	setup(Vector2i(0, 3), [Vector2i(8, 3)])
 	var steps: Array[int] = []
 	var warnings: Array[bool] = []
 	for keys in ["WWE", "SSE", "WWE", "SSE", "WWE"]:
@@ -259,22 +258,22 @@ func test_dash() -> void:
 		["and grabs a player next to where it ends", Vector2i(4, 3), "DWE", [], Vector2i(4, 2), [false]],
 		["up to a desk", Vector2i(4, 5), "DSE", [Vector2i(4, 2)], Vector2i(4, 1), []],
 	]:
-		setup(c[1], 1, [Vector2i(4, 0)])
+		setup(c[1], [Vector2i(4, 0)])
 		set_desks(c[3])
 		arena.rivals()[0].turns_until_dash = 1
 		arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 		press(c[2])
 		check("a dash goes %s" % c[0], [arena.rivals()[0].cell, results], [c[4], c[5]])
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 0)])
+	setup(Vector2i(4, 5), [Vector2i(4, 0)])
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 	check("the grab preview is the cells around the dash's end", [arena.rivals()[0].dash_cells(), arena.rivals()[0].grab_cells().size(), Vector2i(4, 3) in arena.rivals()[0].grab_cells(), Vector2i(4, 1) in arena.rivals()[0].grab_cells()], [[Vector2i(4, 1), Vector2i(4, 2)], 5, true, false])
 
-	setup(Vector2i(4, 1), 1, [Vector2i(4, 0)])
+	setup(Vector2i(4, 1), [Vector2i(4, 0)])
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 	check("a player on the line does not shorten the preview", [arena.rivals()[0].dash_cells(), arena.rivals()[0].grab_cells().size()], [[Vector2i(4, 1), Vector2i(4, 2)], 5])
 
-	setup(Vector2i(4, 4), 1, [Vector2i(4, 1)])
+	setup(Vector2i(4, 4), [Vector2i(4, 1)])
 	set_desks([Vector2i(4, 2)])
 	press("SSE")
 	check("a rival walks around a desk", arena.rivals()[0].cell in [Vector2i(3, 1), Vector2i(5, 1)], true)
@@ -285,7 +284,7 @@ func test_dash() -> void:
 
 
 func test_shove() -> void:
-	setup(Vector2i(4, 3), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 3), [Vector2i(4, 2)])
 	press("WWE")
 	var rival := arena.rivals()[0]
 	check("shove into free floor: pushed back, no motivation lost, skips one turn", [arena.player.cell, rival.motivation, rival.stunned_turns, rival.turns_until_dash, rival.cell], [Vector2i(4, 3), 3, 0, 3, Vector2i(4, 1)])
@@ -295,7 +294,7 @@ func test_shove() -> void:
 	for blocked in ["desk", "edge"]:
 		var player := Vector2i(4, 1) if blocked == "edge" else Vector2i(4, 3)
 		var cell := player + Vector2i.UP
-		setup(player, 1, [cell])
+		setup(player, [cell])
 		if blocked == "desk":
 			set_desks([cell + Vector2i.UP])
 		rival = arena.rivals()[0]
@@ -306,21 +305,21 @@ func test_shove() -> void:
 		press("SSE")
 		check("then it acts again (%s)" % blocked, [rival.cell != cell, rival.turns_until_dash], [true, 2])
 
-	setup(Vector2i(4, 4), 1, [Vector2i(4, 3), Vector2i(4, 2)])
+	setup(Vector2i(4, 4), [Vector2i(4, 3), Vector2i(4, 2)])
 	press("WWE")
 	check("shove into a rival with room behind: both slide back", [arena.rivals()[0].cell, arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns, arena.rivals()[1].motivation, arena.rivals()[1].stunned_turns], [Vector2i(4, 2), 2, 0, 2, 0])
 	check("the rival behind was pushed and then acted", arena.grid.distance(arena.rivals()[1].cell, Vector2i(4, 1)) <= 1, true)
 
-	setup(Vector2i(4, 4), 1, [Vector2i(4, 3), Vector2i(4, 2)])
+	setup(Vector2i(4, 4), [Vector2i(4, 3), Vector2i(4, 2)])
 	set_desks([Vector2i(4, 1)])
 	press("WWE")
 	check("shove into a rival with a desk behind: both stay and lose motivation, the one at the desk is stunned longer", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]), [[Vector2i(4, 3), 2, 0], [Vector2i(4, 2), 2, 1]])
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 4), Vector2i(4, 3), Vector2i(4, 2)])
+	setup(Vector2i(4, 5), [Vector2i(4, 4), Vector2i(4, 3), Vector2i(4, 2)])
 	press("WWE")
 	check("three rivals in a row: the third is not affected", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]).slice(0, 2) + [arena.rivals()[2].motivation], [[Vector2i(4, 4), 2, 0], [Vector2i(4, 3), 2, 0], 3])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(4, 2), FAR])
+	setup(Vector2i(4, 3), [Vector2i(4, 2), FAR])
 	arena.rival_starts.assign([Vector2i(4, 2), FAR])
 	set_desks([Vector2i(4, 1)])
 	arena.rivals()[1].stunned_turns = 99
@@ -336,7 +335,7 @@ func test_shove() -> void:
 	press("WWE")
 	check("the last rival leaving wins", [arena.rivals().size(), results, arena.view.status_label.text], [0, [true], "Every rival gave up."])
 
-	setup(Vector2i(4, 3), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 3), [Vector2i(4, 2)])
 	arena.rivals()[0].turns_until_dash = 1
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 	press("WWE")
@@ -344,14 +343,14 @@ func test_shove() -> void:
 	press("DE")
 	check("then it dashes along it and grabs the player beside its end", [arena.rivals()[0].cell, results], [Vector2i(4, 3), [false]])
 
-	setup(Vector2i(4, 3), 1, [FAR])
+	setup(Vector2i(4, 3), [FAR])
 	set_desks([Vector2i(4, 2)])
 	press("WWE")
 	check("no move onto a desk, no turn", [arena.player.cell, arena.rivals()[0].turns_until_dash], [Vector2i(4, 3), 3])
 
 
 func test_danger() -> void:
-	setup(Vector2i(0, 0), 1, [Vector2i(4, 3)])
+	setup(Vector2i(0, 0), [Vector2i(4, 3)])
 	var rival := arena.rivals()[0]
 	check("a rival that acts normally marks no danger", arena.danger_cells(), [])
 	rival.stunned_turns = 1
@@ -363,7 +362,7 @@ func test_danger() -> void:
 	rival.dash_side = HexGrid.NO_SIDE
 	check("a dash without a line endangers the rival's neighbors", arena.danger_cells().size(), 6)
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 5), [Vector2i(4, 2)])
 	press("DWE")
 	check("moving next to a rival loses", [Vector2i(5, 4) in arena.danger_cells(), results], [false, []])
 	press("WWE")
@@ -371,16 +370,16 @@ func test_danger() -> void:
 
 
 func test_throw_paper() -> void:
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 2), Vector2i(4, 0)])
+	setup(Vector2i(4, 5), [Vector2i(4, 2), Vector2i(4, 0)])
 	arena.rivals()[0].stunned_turns = 99
 	arena.rivals()[1].stunned_turns = 99
 	# The game's abilities have no cooldown; this gives one a cooldown to check the mechanism.
 	arena.player.abilities[1].cooldown = 3
 	press("2")
-	check("key 2 chooses the throw: range 3, only rivals in range", [arena.selection.ability.title, arena.selection.reach, arena.selection.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
+	check("key 2 chooses the throw: range 3, only rivals in range", [arena.selection.ability.title, arena.selection.reach(), arena.selection.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
 	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk   [4] Dash\nPick a rival.")
 	press("1")
-	check("key 1 goes back", [arena.selection.ability.title, arena.selection.reach], ["Move / Shove", 1])
+	check("key 1 goes back", [arena.selection.ability.title, arena.selection.reach()], ["Move / Shove", 1])
 	press("2WWWWWWE")
 	check("a throw costs motivation, takes the turn and goes back to moving", [arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns, arena.selection.ability.title, arena.player.abilities[1].turns_until_ready], [2, 98, "Move / Shove", 3])
 	check("the cursor returns from outside the range", arena.selection.point, arena.selection.cell_to_point(Vector2i(4, 5)))
@@ -395,7 +394,7 @@ func test_throw_paper() -> void:
 	press("2")
 	check("then it is ready", arena.selection.ability.title, "Throw paperwork")
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 5), [Vector2i(4, 2)])
 	set_pillars([Vector2i(4, 3)])
 	press("2")
 	check("a pillar blocks the throw", arena.selection.action_cells(), [])
@@ -407,14 +406,14 @@ func test_throw_paper() -> void:
 	set_pillars([Vector2i(4, 3)])
 	check("not those behind a pillar", Vector2i(4, 2) in arena.selection.range_cells(), false)
 
-	setup(Vector2i(4, 5), 1, [Vector2i(5, 3)])
+	setup(Vector2i(4, 5), [Vector2i(5, 3)])
 	set_pillars([Vector2i(5, 4)])
 	press("2")
 	check("a throw passes along the border of one pillar", arena.selection.action_cells(), [Vector2i(5, 3)])
 	set_pillars([Vector2i(5, 4), Vector2i(4, 4)])
 	check("but not between two", arena.selection.action_cells(), [])
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
+	setup(Vector2i(4, 5), [Vector2i(4, 3)])
 	arena.rival_starts.assign([Vector2i(4, 3)])
 	arena.rivals()[0].motivation = 1
 	press("2WWWWE")
@@ -422,30 +421,30 @@ func test_throw_paper() -> void:
 
 
 func test_throw_desk() -> void:
-	setup(Vector2i(4, 5), 1, [FAR])
+	setup(Vector2i(4, 5), [FAR])
 	arena.rivals()[0].stunned_turns = 99
 	press("3")
 	check("no desk next to the player: nothing to pick", arena.selection.action_cells(), [])
 	set_desks([Vector2i(4, 4)])
 	set_pillars([Vector2i(5, 4)])
 	arena.goal_cell = Vector2i(3, 4)
-	check("the desk next to the player can be picked", [arena.selection.reach, arena.selection.action_cells()], [1, [Vector2i(4, 4)]])
+	check("the desk next to the player can be picked", [arena.selection.reach(), arena.selection.action_cells()], [1, [Vector2i(4, 4)]])
 	press("WWE")
 	var landing := arena.selection.action_cells()
-	check("then where it lands, within 2, no turn yet", [arena.selection.picks, arena.selection.reach, arena.rivals()[0].stunned_turns], [[Vector2i(4, 4)], 2, 99])
+	check("then where it lands, within 2, no turn yet", [arena.selection.picks, arena.selection.reach(), arena.rivals()[0].stunned_turns], [[Vector2i(4, 4)], 2, 99])
 	check("not on the player, a desk, a pillar or the goal", [Vector2i(4, 5) in landing, Vector2i(4, 4) in landing, Vector2i(5, 4) in landing, Vector2i(3, 4) in landing], [false, false, false, false])
 	check("not behind a pillar, but behind a desk", [Vector2i(6, 4) in landing, Vector2i(4, 3) in landing], [false, true])
 	press("3")
-	check("choosing it again starts the picks over", [arena.selection.picks, arena.selection.reach], [[], 1])
+	check("choosing it again starts the picks over", [arena.selection.picks, arena.selection.reach()], [[], 1])
 	press("WWEWWE")
 	check("the desk lands on the picked cell and the turn passes", [desks(), arena.rivals()[0].stunned_turns, arena.player.abilities[2].turns_until_ready, arena.selection.ability.title], [[Vector2i(4, 3)], 98, 0, "Move / Shove"])
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
+	setup(Vector2i(4, 5), [Vector2i(4, 3)])
 	set_desks([Vector2i(4, 4)])
 	press("3WWEWWE")
 	check("a desk thrown at a rival breaks, demotivates and stuns it", [desks(), arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns], [[], 2, 1])
 
-	setup(Vector2i(4, 5), 1, [FAR])
+	setup(Vector2i(4, 5), [FAR])
 	arena.rivals()[0].stunned_turns = 99
 	set_desks([Vector2i(4, 4)])
 	check("while moving, a desk next to the player can be picked", Vector2i(4, 4) in arena.selection.action_cells(), true)
@@ -455,24 +454,24 @@ func test_throw_desk() -> void:
 	arena.player.desk_throw.turns_until_ready = 2
 	check("not while the throw cools down", Vector2i(4, 4) in arena.selection.action_cells(), false)
 
-	setup(Vector2i(4, 3), 1, [FAR])
+	setup(Vector2i(4, 3), [FAR])
 	arena.rivals()[0].stunned_turns = 99
 	set_pillars([Vector2i(4, 2)])
 	press("WWE")
 	check("no move onto a pillar", [arena.player.cell, arena.rivals()[0].stunned_turns], [Vector2i(4, 3), 99])
-	setup(Vector2i(4, 4), 1, [Vector2i(4, 3)])
+	setup(Vector2i(4, 4), [Vector2i(4, 3)])
 	set_pillars([Vector2i(4, 2)])
 	press("WWE")
 	check("a shove into a pillar is a shove into a wall", [arena.rivals()[0].cell, arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns], [Vector2i(4, 3), 2, 1])
 
 
 func test_dash_ability() -> void:
-	setup(Vector2i(4, 3), 1, [Vector2i(4, 2), Vector2i(6, 4)])
+	setup(Vector2i(4, 3), [Vector2i(4, 2), Vector2i(6, 4)])
 	arena.rivals()[0].stunned_turns = 99
 	arena.rivals()[1].stunned_turns = 99
 	press("4")
 	var landings := arena.selection.action_cells()
-	check("key 4 chooses the dash: two cells away in the six directions, not onto a rival", [arena.selection.ability.title, arena.selection.reach, landings.size(), Vector2i(4, 1) in landings, Vector2i(6, 4) in landings, Vector2i(5, 2) in landings], ["Dash", 2, 5, true, false, false])
+	check("key 4 chooses the dash: two cells away in the six directions, not onto a rival", [arena.selection.ability.title, arena.selection.reach(), landings.size(), Vector2i(4, 1) in landings, Vector2i(6, 4) in landings, Vector2i(5, 2) in landings], ["Dash", 2, 5, true, false, false])
 	set_desks([Vector2i(2, 2)])
 	set_pillars([Vector2i(5, 2)])
 	check("not onto a desk, not across a pillar", [Vector2i(2, 2) in arena.selection.action_cells(), Vector2i(6, 2) in arena.selection.action_cells()], [false, false])
@@ -480,13 +479,13 @@ func test_dash_ability() -> void:
 	check("not across a desk", Vector2i(2, 4) in arena.selection.action_cells(), false)
 	press("WWWWE")
 	check("a dash through a rival lands behind it, costs it motivation and starts the cooldown", [arena.player.cell, arena.rivals()[0].motivation, arena.rivals()[0].cell, arena.player.abilities[3].turns_until_ready, arena.selection.ability.title], [Vector2i(4, 1), 2, Vector2i(4, 2), 3, "Move / Shove"])
-	setup(Vector2i(0, 0), 1, [])
+	setup(Vector2i(0, 0), [])
 	press("4")
 	check("the corner has only the landings inside the arena", arena.selection.action_cells(), [Vector2i(0, 2), Vector2i(2, 1)])
 
 
 func test_signals() -> void:
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
+	setup(Vector2i(4, 5), [Vector2i(4, 3)])
 	arena.rivals()[0].stunned_turns = 99
 	var events: Array[String] = []
 	var kind := func(entity: Entity) -> String: return entity.get_script().get_global_name()
@@ -505,7 +504,7 @@ func test_several_rivals() -> void:
 	root.add_child(arena)
 	check("a stage's rivals start their dash countdowns a turn apart", arena.rivals().map(func(rival): return rival.turns_until_dash), [3, 4, 5, 3])
 
-	setup(Vector2i(6, 1), 1, [Vector2i(3, 2), Vector2i(4, 0)])
+	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
 	var dasher := arena.rivals()[1]
 	dasher.turns_until_dash = 1
@@ -516,7 +515,7 @@ func test_several_rivals() -> void:
 	check("a rival that steps onto a dash line keeps the line whole and moves its end, in its own turn", ends.slice(0, 2), [[[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 2)], [[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 1)]])
 	check("the dash stops before it and costs it motivation", [dasher.cell, arena.rivals()[0].cell, arena.rivals()[0].motivation], [Vector2i(4, 1), Vector2i(4, 2), 2])
 
-	setup(Vector2i(8, 6), 1, [Vector2i(4, 0), Vector2i(4, 1)])
+	setup(Vector2i(8, 6), [Vector2i(4, 0), Vector2i(4, 1)])
 	arena.rivals()[1].stunned_turns = 99
 	arena.rivals()[1].motivation = 1
 	arena.rivals()[0].turns_until_dash = 1
@@ -524,13 +523,13 @@ func test_several_rivals() -> void:
 	press("E")
 	check("a dash passes through a rival, which here gives up and takes no turn", [arena.rivals().size(), arena.rivals()[0].cell], [1, Vector2i(4, 2)])
 
-	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	setup(Vector2i(4, 5), [Vector2i(4, 2)])
 	arena.rivals()[0].turns_until_dash = 1
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
 	press("2WWWWWWE")
 	check("thrown paperwork calls off a warned dash: the countdown starts over and the rival steps", [arena.rivals()[0].motivation, arena.rivals()[0].turns_until_dash, arena.rivals()[0].dash_side, arena.rivals()[0].cell, arena.danger_cells(), results], [2, 2, HexGrid.NO_SIDE, Vector2i(4, 3), [], []])
 
-	setup(Vector2i(0, 0), 1, [Vector2i(0, 1), Vector2i(0, 3)])
+	setup(Vector2i(0, 0), [Vector2i(0, 1), Vector2i(0, 3)])
 	set_desks([Vector2i(1, 0)])
 	arena.rivals()[0].stunned_turns = 99
 	press("2SSE")

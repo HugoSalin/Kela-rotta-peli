@@ -22,8 +22,6 @@ var picks: Array[Vector2i] = []
 # The cursor: a point on a square lattice, Vector2i(column, half_row). Hex centers lie on
 # every second point; the points between are seams, where no cell is selected.
 var point: Vector2i
-# How far from the player the cursor may go.
-var reach := 1
 
 
 func _ready() -> void:
@@ -74,19 +72,23 @@ func pick(cell: Vector2i) -> void:
 		arena.take_turn(ability, picked)
 
 
-# The cursor's reach follows the next pick; a cursor left outside it returns to the player.
+# A cursor left outside the next pick's reach returns to the player.
 func update() -> void:
-	reach = ability.reaches[picks.size()]
 	if not is_point_allowed(point):
 		point = cell_to_point(arena.player.cell)
 	changed.emit()
 
 
-# The cells the next pick of the chosen ability reaches: in range and in sight of the player.
+# How far from the player the next pick of the chosen ability may be; the cursor stays within it.
+func reach() -> int:
+	return ability.reaches[picks.size()]
+
+
+# The cells the next pick reaches: in range and in sight of the player.
 func range_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in grid.cells:
-		if grid.distance(arena.player.cell, cell) <= ability.reaches[picks.size()] and arena.has_line_of_sight(arena.player.cell, cell):
+		if grid.distance(arena.player.cell, cell) <= reach() and arena.has_line_of_sight(arena.player.cell, cell):
 			result.append(cell)
 	return result
 
@@ -119,7 +121,7 @@ func is_point_allowed(lattice_point: Vector2i) -> bool:
 
 
 func is_cell_allowed(cell: Vector2i) -> bool:
-	return grid.has(cell) and grid.distance(arena.player.cell, cell) <= reach
+	return grid.has(cell) and grid.distance(arena.player.cell, cell) <= reach()
 
 
 # ---- The lattice ----
