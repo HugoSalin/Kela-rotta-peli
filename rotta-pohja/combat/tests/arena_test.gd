@@ -93,7 +93,7 @@ func run() -> void:
 	test_throw_paper()
 	test_throw_desk()
 	test_dash_ability()
-	test_signals()
+	await test_signals()
 	test_several_rivals()
 	test_stages_can_be_won()
 	await test_loop()
@@ -495,6 +495,15 @@ func test_signals() -> void:
 	arena.entity_removed.connect(func(entity): events.append("removed " + kind.call(entity)))
 	press("2WWWWE")
 	check("a paperwork throw reports the paper added, moved and removed, in that order", events, ["added Paperwork", "moved Paperwork", "removed Paperwork"])
+
+	setup(Vector2i(4, 5), [Vector2i(4, 3)])
+	var rival: Entity = arena.rivals()[0]
+	for key in "2WWWWE":
+		press_one(key)
+	check("the view shows a rival's dots as they were while the paper flies", [rival.pips(), arena.view.drawn[rival].look.pips], [2, 3])
+	await create_timer(0.3).timeout
+	check("and one fewer once it has landed, before the animation is over", [arena.view.drawn[rival].look.pips, arena.view.animation != null], [2, true])
+	arena.view.finish()
 
 
 func test_several_rivals() -> void:
