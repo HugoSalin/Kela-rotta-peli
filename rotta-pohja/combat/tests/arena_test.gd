@@ -307,17 +307,12 @@ func test_shove() -> void:
 
 	setup(Vector2i(4, 4), [Vector2i(4, 3), Vector2i(4, 2)])
 	press("WWE")
-	check("shove into a rival with room behind: both slide back", [arena.rivals()[0].cell, arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns, arena.rivals()[1].motivation, arena.rivals()[1].stunned_turns], [Vector2i(4, 2), 2, 0, 2, 0])
-	check("the rival behind was pushed and then acted", arena.grid.distance(arena.rivals()[1].cell, Vector2i(4, 1)) <= 1, true)
-
-	setup(Vector2i(4, 4), [Vector2i(4, 3), Vector2i(4, 2)])
-	set_desks([Vector2i(4, 1)])
-	press("WWE")
-	check("shove into a rival with a desk behind: both stay and lose motivation, the one at the desk is stunned longer", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]), [[Vector2i(4, 3), 2, 0], [Vector2i(4, 2), 2, 1]])
+	check("shove into a rival: both stay, lose motivation and are stunned for two turns, as at a desk", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]), [[Vector2i(4, 3), 2, 1], [Vector2i(4, 2), 2, 1]])
 
 	setup(Vector2i(4, 5), [Vector2i(4, 4), Vector2i(4, 3), Vector2i(4, 2)])
+	arena.rivals()[2].stunned_turns = 99
 	press("WWE")
-	check("three rivals in a row: the third is not affected", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]).slice(0, 2) + [arena.rivals()[2].motivation], [[Vector2i(4, 4), 2, 0], [Vector2i(4, 3), 2, 0], 3])
+	check("three rivals in a row: the third is not affected", arena.rivals().map(func(r): return [r.cell, r.motivation, r.stunned_turns]), [[Vector2i(4, 4), 2, 1], [Vector2i(4, 3), 2, 1], [Vector2i(4, 2), 3, 98]])
 
 	setup(Vector2i(4, 3), [Vector2i(4, 2), FAR])
 	arena.rival_starts.assign([Vector2i(4, 2), FAR])

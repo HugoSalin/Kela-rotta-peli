@@ -3,7 +3,7 @@ extends Entity
 
 # The player's rat and what it can do on a turn: the abilities.
 
-# Turns a shoved rival skips: after hitting a desk or the arena's edge, and otherwise.
+# Turns a shoved rival skips: after hitting something behind it, and otherwise.
 const WALL_STUN := 2
 const SHOVE_STUN := 1
 const PAPER_MIN_RANGE := 2
@@ -52,31 +52,19 @@ func move_or_shove(picked: Array[Vector2i]) -> void:
 
 
 # Pushes the rival one cell straight away from the player and stuns it. If something is
-# behind it, it stays and loses motivation; hitting a desk or the arena's edge stuns longer.
-# A rival behind it loses motivation too: both slide back one cell if there is room,
-# otherwise that rival is stunned as well.
+# behind it, it stays, is stunned longer and loses motivation; a rival behind it gets the same.
 func shove(rival: Rival) -> void:
-	var side := arena.grid.side_between(cell, rival.cell)
-	var behind := arena.grid.step(rival.cell, side)
-	var other := arena.rival_at(behind)
-	rival.stun(SHOVE_STUN if arena.is_free(behind) or other else WALL_STUN)
+	var behind := arena.grid.step(rival.cell, arena.grid.side_between(cell, rival.cell))
 	if arena.is_free(behind):
+		rival.stun(SHOVE_STUN)
 		arena.move(rival, behind)
 		return
-	if other:
-		var far := arena.grid.step(behind, side)
-		if arena.is_free(far):
-			arena.move(other, far)
-			arena.move(rival, behind)
-		else:
-			other.stun(SHOVE_STUN if arena.rival_at(far) else WALL_STUN)
-			arena.block(rival, behind)
-			arena.block(other, far)
-	else:
-		arena.block(rival, behind)
-	rival.demotivate()
-	if other:
-		other.demotivate()
+	var other := arena.rival_at(behind)
+	arena.block(rival, behind)
+	for hit in [rival, other]:
+		if hit:
+			hit.stun(WALL_STUN)
+			hit.demotivate()
 
 
 # ---- Throw paperwork ----
