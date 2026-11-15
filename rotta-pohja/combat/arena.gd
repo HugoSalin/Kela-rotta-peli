@@ -215,8 +215,6 @@ func has_line_of_sight(from: Vector2i, to: Vector2i) -> bool:
 
 # ---- Turns ----
 
-# ---- Turns ----
-
 # The player uses the ability on the picked cells; then every other entity acts.
 # The turn is decided at once; the view then shows its changes one after another.
 func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
