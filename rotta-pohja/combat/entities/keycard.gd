@@ -17,5 +17,9 @@ func take_turn() -> void:
 		arena.remove(self)
 
 
+func card() -> Card:
+	return Card.new("Key card", "The goal stays locked until you pick this up: end your action on its cell.", color())
+
+
 func color() -> Color:
 	return Color(0.95, 0.8, 0.25)

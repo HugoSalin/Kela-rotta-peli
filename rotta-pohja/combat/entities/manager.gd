@@ -28,3 +28,7 @@ func demotivate() -> void:
 
 func pips() -> int:
 	return 0
+
+
+func card() -> Card:
+	return Card.new("Manager", "Never gives up, and can't be shoved or hit with a desk. Thrown paperwork keeps it busy for 2 turns. An office chair pushes it away and stuns it for 4.", body_color)

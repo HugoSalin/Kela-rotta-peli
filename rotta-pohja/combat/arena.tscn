@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://combat/hex_grid.gd" id="2_grid"]
 [ext_resource type="Script" path="res://combat/arena_view.gd" id="3_view"]
 [ext_resource type="Script" path="res://combat/selection.gd" id="4_selection"]
+[ext_resource type="Script" path="res://combat/card_panel.gd" id="5_cards"]
 
 [sub_resource type="TileSet" id="TileSet_hex"]
 tile_shape = 3
@@ -43,3 +44,64 @@ horizontal_alignment = 1
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("4_selection")
+
+[node name="Cards" type="CanvasLayer" parent="."]
+script = ExtResource("5_cards")
+
+[node name="Shade" type="ColorRect" parent="Cards"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="Cards"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Cards/Center"]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Cards/Center/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="Rows" type="VBoxContainer" parent="Cards/Center/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Heading" type="HBoxContainer" parent="Cards/Center/Panel/Margin/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Swatch" type="ColorRect" parent="Cards/Center/Panel/Margin/Rows/Heading"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="TitleLabel" type="Label" parent="Cards/Center/Panel/Margin/Rows/Heading"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+
+[node name="TextLabel" type="Label" parent="Cards/Center/Panel/Margin/Rows"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+
+[node name="HintLabel" type="Label" parent="Cards/Center/Panel/Margin/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Click or press Enter to continue"
+horizontal_alignment = 1

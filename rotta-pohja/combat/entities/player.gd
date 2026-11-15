@@ -32,6 +32,10 @@ func color() -> Color:
 	return Color(0.9, 0.85, 0.6)
 
 
+func card() -> Card:
+	return Card.new("You", "A rat on benefits, carrying a job application form. Kela says: find a job. Get through each floor without losing the form. If a rival takes it, you start the floor again.", color())
+
+
 # ---- Move / Shove ----
 
 # The player's own cell is a pick: it waits, and the turn passes.

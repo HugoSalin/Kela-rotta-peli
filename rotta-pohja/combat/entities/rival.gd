@@ -174,3 +174,7 @@ func has_warning() -> bool:
 
 func warning_cells() -> Array[Vector2i]:
 	return dash_cells()
+
+
+func card() -> Card:
+	return Card.new("Rival", "Another job-seeker, after your form. It walks one cell a turn and takes the form if its turn starts next to you. Every third turn it dashes two cells in a straight line: a ring and a yellow line warn you a turn ahead, and on the red cells the dash takes your form. The dots are its motivation; with none left it gives up. Shove it to stun it for a turn. Shove it against something to stun it for 2 turns and cost it 1 motivation.", body_color)

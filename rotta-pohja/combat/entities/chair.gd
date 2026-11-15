@@ -38,5 +38,9 @@ func shove(side: int) -> void:
 		arena.remove(self)
 
 
+func card() -> Card:
+	return Card.new("Office chair", "Shove it and it rolls up to 10 cells in a straight line. The first rival it meets is pushed along, and stunned for 4 turns when it hits something. That uses the chair up.", color())
+
+
 func color() -> Color:
 	return Color(0.25, 0.6, 0.6)

@@ -12,5 +12,9 @@ func _init(start_cell: Vector2i) -> void:
 	shape = Shape.MARK
 
 
+func card() -> Card:
+	return Card.new("Wet floor", "Whoever steps straight onto it slides on in the same direction, until the floor is dry or something is in the way. Rivals slide too.", color())
+
+
 func color() -> Color:
 	return Color(0.45, 0.75, 0.95)

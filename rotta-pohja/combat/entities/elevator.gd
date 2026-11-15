@@ -21,6 +21,10 @@ func take_turn() -> void:
 		arena.add_staggered(Rival.new(cell))
 
 
+func card() -> Card:
+	return Card.new("Elevator", "A new rival steps out every 4 turns; the number counts down. Nothing comes out while someone stands on it.", color())
+
+
 func color() -> Color:
 	return Color(0.75, 0.75, 0.85)
 

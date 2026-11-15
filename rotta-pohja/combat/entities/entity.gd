@@ -58,6 +58,13 @@ func warning_cells() -> Array[Vector2i]:
 	return []
 
 
+# ---- Its card ----
+
+# What the player is told when first meeting its kind; null for a kind that needs no words.
+func card() -> Card:
+	return null
+
+
 # ---- What the player does to it ----
 
 # The player shoves it toward that side.

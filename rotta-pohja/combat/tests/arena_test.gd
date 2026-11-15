@@ -112,6 +112,7 @@ func run() -> void:
 	await test_signals()
 	test_several_rivals()
 	test_mouse()
+	test_cards()
 	test_stages_can_be_won()
 	await test_loop()
 	print("%d checks, %d failed" % [checks, fails])
@@ -157,6 +158,26 @@ func test_mouse() -> void:
 	check("a click on an ability's button chooses it", arena.selection.ability.title, "Throw paperwork")
 	mouse(Vector2i(4, 0), true)
 	check("and a click on a rival throws", arena.rivals()[0].motivation, 2)
+
+
+func test_cards() -> void:
+	CardPanel.seen.clear()
+	setup(Vector2i(4, 3), [])
+	var cards: CardPanel = arena.get_node("Cards")
+	var confirm := InputEventAction.new()
+	confirm.action = "ui_accept"
+	confirm.pressed = true
+	check("a kind met for the first time shows its card", [cards.visible, cards.title_label.text], [true, "You"])
+	cards._input(confirm)
+	check("confirming closes it", cards.visible, false)
+	setup(Vector2i(4, 3), [])
+	cards = arena.get_node("Cards")
+	check("a kind met before shows none", cards.visible, false)
+	cards.show_cards([Card.new("First", "One."), Card.new("Second", "Two.")])
+	cards._input(confirm)
+	check("cards follow each other", [cards.visible, cards.title_label.text, cards.text_label.text], [true, "Second", "Two."])
+	cards._input(confirm)
+	check("the last one closes the panel", cards.visible, false)
 
 
 func test_cursor() -> void:
