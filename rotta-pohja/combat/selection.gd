@@ -14,7 +14,7 @@ const CURSOR_STEPS: Dictionary[String, Vector2i] = {
 }
 
 @onready var arena: Arena = get_parent()
-@onready var grid: HexGrid = $"../Grid"
+@onready var grid: HexGrid = $"../Background"
 
 var ability: Ability
 # The cells picked so far for the chosen ability.

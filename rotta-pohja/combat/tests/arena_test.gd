@@ -20,10 +20,12 @@ func check(what: String, actual, expected) -> void:
 		print("FAIL %s | expected %s | actual %s" % [what, expected, actual])
 
 
-func setup(player: Vector2i, enemy_cells: Array) -> void:
+# `paint` changes the tiles of the new arena before it starts.
+func setup(player: Vector2i, enemy_cells: Array, paint := func(_painted: Arena): pass) -> void:
 	if arena:
 		arena.free()
 	arena = load("res://combat/arena.tscn").instantiate()
+	paint.call(arena)
 	root.add_child(arena)
 	arena.combat_finished.connect(func(won): results.append(won))
 	results.clear()
@@ -100,6 +102,7 @@ func _initialize() -> void:
 func run() -> void:
 	test_grid()
 	test_layout()
+	test_room()
 	test_cursor()
 	test_turns()
 	test_queue_number()
@@ -143,6 +146,22 @@ func test_layout() -> void:
 	var shown := arena.view.bounds()
 	check("the ability buttons fit in their bar", arena.view.ability_bar.get_combined_minimum_size().x <= arena.view.ability_bar.size.x, true)
 	check("which is centered and no taller than the game's window", [arena.position + shown.get_center(), shown.size.y <= ProjectSettings.get_setting("display/window/size/viewport_height")], [root.get_visible_rect().size / 2, true])
+
+
+# A room with a hole in the middle and a cell added outside the 9 by 7 of arena.tscn.
+func test_room() -> void:
+	setup(Vector2i(4, 2), [Vector2i(4, 4)], func(painted: Arena):
+		var background: TileMapLayer = painted.get_node("Background")
+		background.erase_cell(Vector2i(4, 3))
+		background.set_cell(Vector2i(9, 0), 0, Kinds.FLOOR_TILE))
+	check("the room's cells are the painted ones", [arena.grid.cells.size(), arena.grid.has(Vector2i(4, 3)), arena.grid.has(Vector2i(9, 0))], [63, false, true])
+	check("the painted floor is shown", arena.grid.visible, true)
+	check("the labels are as wide as the room", [arena.view.status_label.size.x, arena.view.prompt_label.size.x], [arena.view.room_bounds().size.x, arena.view.room_bounds().size.x])
+	check("a hole can't be walked on", arena.selection.action_cells().has(Vector2i(4, 3)), false)
+	check("a hole blocks sight, as a wall does", [arena.has_line_of_sight(Vector2i(4, 2), Vector2i(4, 4)), arena.has_line_of_sight(Vector2i(3, 2), Vector2i(3, 4))], [false, true])
+	press("2")
+	check("so paperwork can't be thrown across it", arena.selection.action_cells(), [])
+	check("enemies walk around it", arena.path_step(arena.enemies()[0], arena.player.cell) in [Vector2i(3, 3), Vector2i(5, 3)], true)
 
 
 func test_mouse() -> void:

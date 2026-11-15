@@ -1,0 +1,38 @@
+[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://combat/stage_tiles.png" id="1_y6rg7"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_s2tbr"]
+texture = ExtResource("1_y6rg7")
+texture_region_size = Vector2i(80, 70)
+0:0/0 = 0
+0:1/0 = 0
+0:1/0/custom_data_0 = "player"
+1:1/0 = 0
+1:1/0/custom_data_0 = "enemy"
+2:1/0 = 0
+2:1/0/custom_data_0 = "intern"
+3:1/0 = 0
+3:1/0/custom_data_0 = "manager"
+4:1/0 = 0
+4:1/0/custom_data_0 = "desk"
+5:1/0 = 0
+5:1/0/custom_data_0 = "pillar"
+6:1/0 = 0
+6:1/0/custom_data_0 = "chair"
+7:1/0 = 0
+7:1/0/custom_data_0 = "keycard"
+8:1/0 = 0
+8:1/0/custom_data_0 = "wet_floor"
+9:1/0 = 0
+9:1/0/custom_data_0 = "elevator"
+10:1/0 = 0
+10:1/0/custom_data_0 = "goal"
+
+[resource]
+tile_shape = 3
+tile_offset_axis = 1
+tile_size = Vector2i(80, 70)
+custom_data_layer_0/name = "kind"
+custom_data_layer_0/type = 4
+sources/0 = SubResource("TileSetAtlasSource_s2tbr")

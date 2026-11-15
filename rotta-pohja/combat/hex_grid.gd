@@ -1,11 +1,10 @@
 class_name HexGrid
 extends TileMapLayer
 
-# The arena's cells and their geometry. A cell is Vector2i(column, row) on the flat-top hex
-# grid; other code asks here instead of doing arithmetic on cells.
+# The room's cells, which are the painted ones, and their geometry. A cell is
+# Vector2i(column, row) on the flat-top hex grid; other code asks here instead of doing
+# arithmetic on cells.
 
-const COLUMNS := 9
-const ROWS := 7
 const NO_CELL := Vector2i(-1, -1)
 const NO_SIDE := -1
 const SIDES: Array[TileSet.CellNeighbor] = [
@@ -17,19 +16,25 @@ const SIDES: Array[TileSet.CellNeighbor] = [
 	TileSet.CELL_NEIGHBOR_TOP_LEFT_SIDE,
 ]
 
-var cells: Dictionary[Vector2i, bool] = {}
+# Each cell with its number: its place among the cells, by column and then row.
+var cells: Dictionary[Vector2i, int] = {}
 
 
 # ---- Cells ----
 
-func _init() -> void:
-	for column in COLUMNS:
-		for row in ROWS:
-			cells[Vector2i(column, row)] = true
+func _ready() -> void:
+	var painted := get_used_cells()
+	painted.sort()
+	for cell in painted:
+		cells[cell] = cells.size()
 
 
 func has(cell: Vector2i) -> bool:
 	return cells.has(cell)
+
+
+func id_of(cell: Vector2i) -> int:
+	return cells[cell]
 
 
 func neighbors(cell: Vector2i) -> Array[Vector2i]:

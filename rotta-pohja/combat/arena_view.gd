@@ -13,6 +13,8 @@ const RANGE_COLOR := Color(0.23, 0.33, 0.28)
 const DANGER_COLOR := Color(0.45, 0.1, 0.1)
 const WARNING_COLOR := Color(1.0, 0.85, 0.2)
 const SELECTION_COLOR := Color.WHITE
+# Between the room and the objective above it, and between the ability bar and the prompt.
+const LABEL_GAP := 6.0
 
 
 # How an entity looked at one moment of the turn.
@@ -40,7 +42,7 @@ class Drawn:
 
 
 @onready var arena: Arena = get_parent()
-@onready var grid: HexGrid = $"../Grid"
+@onready var grid: HexGrid = $"../Background"
 @onready var selection: Selection = $"../Selection"
 @onready var status_label: Label = $StatusLabel
 @onready var ability_bar: HBoxContainer = $AbilityBar
@@ -67,6 +69,18 @@ func _ready() -> void:
 	arena.turn_ended.connect(_on_turn_ended)
 	selection.changed.connect(refresh)
 	arena.ready.connect(build_ability_bar)
+	place_labels()
+
+
+# The objective goes above the room and the prompt below it, as wide as the room; the
+# ability bar is centered between the room and the prompt.
+func place_labels() -> void:
+	var room := room_bounds()
+	status_label.position = Vector2(room.position.x, room.position.y - status_label.size.y - LABEL_GAP)
+	status_label.size.x = room.size.x
+	ability_bar.position = Vector2(room.get_center().x - ability_bar.size.x / 2, room.end.y)
+	prompt_label.position = Vector2(room.position.x, ability_bar.get_rect().end.y + LABEL_GAP)
+	prompt_label.size.x = room.size.x
 
 
 # A button for each ability; clicking it chooses the ability, as its number key does. The
@@ -174,10 +188,14 @@ func position_of(entity: Entity) -> Vector2:
 	return drawn[entity].position
 
 
-# The rectangle around everything shown: the cells and the labels.
+# The rectangle around everything shown: the room and the labels.
 func bounds() -> Rect2:
+	return room_bounds().merge(status_label.get_rect()).merge(ability_bar.get_rect()).merge(prompt_label.get_rect())
+
+
+func room_bounds() -> Rect2:
 	var half := Vector2(grid.tile_set.tile_size) / 2
-	var result := status_label.get_rect().merge(ability_bar.get_rect()).merge(prompt_label.get_rect())
+	var result := Rect2(grid.map_to_local(grid.cells.keys()[0]) - half, half * 2)
 	for cell in grid.cells:
 		result = result.merge(Rect2(grid.map_to_local(cell) - half, half * 2))
 	return result
@@ -220,7 +238,8 @@ func _draw() -> void:
 		draw_polyline(hex_corners(grid.map_to_local(selection.point_to_cell(selection.point))), SELECTION_COLOR, 5.0)
 
 
-# The floor, then the entities that fill a cell, then the marks on top of both.
+# The cells with something to show on the painted floor, then the entities that fill a
+# cell, then the marks on top of both.
 # What the player can pick is green, the rest of the ability's range a darker green:
 # the whole cell on plain floor, a smaller hex inside an obstacle or a dangerous cell
 # (not under the player, whose circle would cover most of it).
@@ -237,7 +256,8 @@ func draw_cells() -> void:
 		elif cell in in_range and not obstacle:
 			mark = RANGE_COLOR
 		var plain := color == FLOOR_COLOR and not obstacle
-		draw_hex(grid.map_to_local(cell), mark if plain else color)
+		if not plain or mark != FLOOR_COLOR:
+			draw_hex(grid.map_to_local(cell), mark if plain else color)
 		if not plain and mark != color and cell != arena.player.cell:
 			inner_marks[cell] = mark
 	for entity in drawn:

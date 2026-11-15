@@ -40,7 +40,7 @@ signal combat_finished(won: bool)
 
 # ---- Setup ----
 
-@onready var grid: HexGrid = $Grid
+@onready var grid: HexGrid = $Background
 @onready var view: ArenaView = $View
 @onready var selection: Selection = $Selection
 
@@ -213,9 +213,10 @@ func is_shovable(cell: Vector2i) -> bool:
 	return entity != null and entity.shovable
 
 
+# A cell outside the room is a wall.
 func blocks_sight(cell: Vector2i) -> bool:
 	var entity := entity_at(cell)
-	return entity != null and entity.blocks_sight
+	return not grid.has(cell) or (entity != null and entity.blocks_sight)
 
 
 # A line that runs along the border between two cells is blocked only when both block sight.
@@ -340,20 +341,16 @@ static func listed(items: Array) -> String:
 
 # ---- Paths ----
 
-func cell_id(cell: Vector2i) -> int:
-	return cell.x + cell.y * HexGrid.COLUMNS
-
-
 # The cells without an obstacle, each connected to its neighbors.
 func build_paths() -> AStar2D:
 	var result := AStar2D.new()
 	for cell in grid.cells:
 		if not is_obstacle(cell):
-			result.add_point(cell_id(cell), grid.map_to_local(cell))
+			result.add_point(grid.id_of(cell), grid.map_to_local(cell))
 	for cell in grid.cells:
 		for neighbor in grid.neighbors(cell):
-			if result.has_point(cell_id(cell)) and result.has_point(cell_id(neighbor)):
-				result.connect_points(cell_id(cell), cell_id(neighbor))
+			if result.has_point(grid.id_of(cell)) and result.has_point(grid.id_of(neighbor)):
+				result.connect_points(grid.id_of(cell), grid.id_of(neighbor))
 	return result
 
 
@@ -366,10 +363,10 @@ func path_step(mover: Entity, to: Vector2i) -> Vector2i:
 	var in_the_way := entities.filter(func(entity): return entity.solid and not entity.obstacle and entity != mover and entity.cell != to)
 	for avoided in [in_the_way, []]:
 		for entity in avoided:
-			paths.set_point_disabled(cell_id(entity.cell), true)
-		var path := paths.get_id_path(cell_id(mover.cell), cell_id(to))
+			paths.set_point_disabled(grid.id_of(entity.cell), true)
+		var path := paths.get_id_path(grid.id_of(mover.cell), grid.id_of(to))
 		for entity in avoided:
-			paths.set_point_disabled(cell_id(entity.cell), false)
+			paths.set_point_disabled(grid.id_of(entity.cell), false)
 		if path.size() >= 2:
-			return Vector2i(path[1] % HexGrid.COLUMNS, path[1] / HexGrid.COLUMNS)
+			return grid.local_to_map(paths.get_point_position(path[1]))
 	return mover.cell
