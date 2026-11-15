@@ -5,7 +5,7 @@ extends SceneTree
 
 const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept", "1": "combat_ability_1", "2": "combat_ability_2", "3": "combat_ability_3", "4": "combat_ability_4"}
 const FAR := Vector2i(8, 6)
-const STAGES := preload("res://combat/loop_prototype.gd").STAGES
+var stages := preload("res://combat/loop_prototype.gd").stage_scenes()
 
 var arena: Arena
 var results: Array[bool] = []
@@ -601,7 +601,7 @@ func test_intern() -> void:
 # The throws are left out: with them the search takes too long, and a stage that can be won
 # without them can be won.
 func test_stages_can_be_won() -> void:
-	for scene in STAGES:
+	for scene in stages:
 		if arena:
 			arena.free()
 		arena = scene.instantiate()
@@ -659,18 +659,18 @@ func test_loop() -> void:
 	var loop = load("res://combat/loop_prototype.tscn").instantiate()
 	loop.pause = 0.0
 	root.add_child(loop)
-	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 6"])
+	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of %d" % stages.size()])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
 	loop.arena.combat_finished.emit(true)
 	await create_timer(0.1).timeout
-	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 6"])
+	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of %d" % stages.size()])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss on the second stage goes back to the first", loop.stage, 0)
-	for stage in STAGES.size():
+	for stage in stages.size():
 		loop.arena.combat_finished.emit(true)
 		await create_timer(0.1).timeout
-	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [STAGES.size() - 1, "You got the job."])
+	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [stages.size() - 1, "You got the job."])
 	loop.free()
