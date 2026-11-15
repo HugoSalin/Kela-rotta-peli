@@ -21,6 +21,7 @@ signal combat_finished(won: bool)
 @export var player_start := Vector2i(0, 3)
 @export var rival_starts: Array[Vector2i] = []
 @export var intern_starts: Array[Vector2i] = []
+@export var manager_starts: Array[Vector2i] = []
 @export var desk_cells: Array[Vector2i] = []
 @export var pillar_cells: Array[Vector2i] = []
 @export var elevator_cells: Array[Vector2i] = []
@@ -86,6 +87,8 @@ func _ready() -> void:
 		add_staggered(Rival.new(cell))
 	for cell in intern_starts:
 		add_staggered(Intern.new(cell))
+	for cell in manager_starts:
+		add_staggered(Manager.new(cell))
 	player = Player.new(player_start)
 	add(player)
 	# A rival that dashes on the first turn shows its line from the start.

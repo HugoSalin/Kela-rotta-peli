@@ -521,6 +521,7 @@ func test_several_rivals() -> void:
 	test_chair()
 	test_keycard()
 	test_wet_floor()
+	test_manager()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -696,6 +697,34 @@ func test_wet_floor() -> void:
 	arena.add(WetFloor.new(Vector2i(4, 4)))
 	press("4WWWWE")
 	check("the player's dash onto wet floor slides on", arena.player.cell, Vector2i(4, 3))
+
+
+func test_manager() -> void:
+	setup(Vector2i(4, 5), [Vector2i(4, 2)])
+	var manager := Manager.new(Vector2i(4, 4))
+	arena.add(manager)
+	arena.rivals()[0].stunned_turns = 99
+	manager.stunned_turns = 99
+	set_desks([Vector2i(5, 5)])
+	check("a manager can't be shoved", Vector2i(4, 4) in arena.selection.action_cells(), false)
+	press("3DSE")
+	check("or hit with a desk", [arena.selection.picks, Vector2i(4, 4) in arena.selection.action_cells()], [[Vector2i(5, 5)], false])
+	press("1")
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 5))
+	press("4WWWWE")
+	check("a dash through it costs it nothing", [arena.player.cell, arena.entities.has(manager), manager.pips()], [Vector2i(4, 3), true, 0])
+	manager.stunned_turns = 0
+	manager.cell = Vector2i(4, 0)
+	arena.rivals()[0].cell = Vector2i(0, 0)
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 3))
+	press("2WWWWWWE")
+	check("thrown paperwork stuns it for two turns", [manager.stunned_turns, manager.cell], [1, Vector2i(4, 0)])
+	manager.stunned_turns = 99
+	manager.cell = Vector2i(4, 1)
+	arena.rivals()[0].cell = Vector2i(4, 2)
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 3))
+	press("WWE")
+	check("a rival shoved into it is knocked, the manager is not", [arena.rivals()[0].motivation, manager.stunned_turns], [2, 98])
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.

@@ -133,6 +133,12 @@ func stun(turns: int) -> void:
 	stunned_turns = turns
 
 
+# Thrown paperwork calls off a dash it warns of and costs motivation.
+func hit_by_paper() -> void:
+	cancel_dash()
+	demotivate()
+
+
 # A dash it warns of is called off, and its countdown starts over.
 func cancel_dash() -> void:
 	if has_warning():

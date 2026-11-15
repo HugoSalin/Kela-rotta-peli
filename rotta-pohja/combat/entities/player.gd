@@ -58,18 +58,18 @@ func throw_paper(picked: Array[Vector2i]) -> void:
 	arena.add(paper)
 	arena.move(paper, picked[0])
 	arena.remove(paper)
-	var rival := arena.rival_at(picked[0])
-	rival.cancel_dash()
-	rival.demotivate()
+	arena.rival_at(picked[0]).hit_by_paper()
 
 
 # ---- Throw desk ----
 
-# First the desk, then where it lands. It can't land on a desk, a pillar or the goal.
+# First the desk, then where it lands. It can't land on a desk, a pillar, the goal or a
+# rival that can't be shoved.
 func can_throw_desk(picked: Array[Vector2i], target: Vector2i) -> bool:
 	if picked.is_empty():
 		return arena.is_throwable(target)
-	return target != arena.goal_cell and not arena.is_obstacle(target)
+	var rival := arena.rival_at(target)
+	return target != arena.goal_cell and not arena.is_obstacle(target) and (rival == null or rival.shovable)
 
 
 # The desk moves to the cell. Landing on a rival, it breaks and knocks the rival.
