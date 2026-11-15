@@ -1,11 +1,11 @@
-class_name Rival
+class_name Enemy
 extends Entity
 
-# A rival rat that hunts the player's form.
+# An enemy rat that hunts the player's form.
 
 # A dash goes up to DASH_LENGTH cells in a straight line.
 const DASH_LENGTH := 2
-const START_MOTIVATION := 3
+const START_HEALTH := 3
 # Turns it skips after a shove: when it was knocked against something, and otherwise.
 const KNOCK_STUN := 2
 const SHOVE_STUN := 1
@@ -15,7 +15,7 @@ const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 # It dashes on every third turn.
 var dash_every := 3
 var turns_until_dash := dash_every
-var motivation := START_MOTIVATION
+var health := START_HEALTH
 # How many cells it walks on a turn without a dash.
 var speed := 1
 var body_color := COLOR
@@ -32,8 +32,8 @@ func _init(start_cell: Vector2i) -> void:
 
 # ---- Its turn ----
 
-# A stunned rival skips its turn. When its countdown ends it dashes along the line fixed
-# when the warning started, through other rivals, and takes the form if the player is on the
+# A stunned enemy skips its turn. When its countdown ends it dashes along the line fixed
+# when the warning started, through other enemies, and takes the form if the player is on the
 # line or next to where it ends.
 # Otherwise it takes the form if it is next to the player, or else walks along the shortest
 # path to the player, as far as its speed and the free cells allow.
@@ -51,8 +51,8 @@ func take_turn() -> void:
 	aim()
 
 
-# A rival on the line loses motivation. It moves over the cells of its line without a rival,
-# also those a rival just gave up, and takes the form on the line and next to where it ends.
+# An enemy on the line loses health. It moves over the cells of its line without an enemy,
+# also those an enemy just gave up, and takes the form on the line and next to where it ends.
 # A slide on wet floor ends the dash where the slide ends.
 func dash() -> void:
 	turns_until_dash = dash_every
@@ -60,12 +60,12 @@ func dash() -> void:
 	var start := cell
 	dash_side = HexGrid.NO_SIDE
 	for step in line:
-		var rival := arena.rival_at(step)
-		if rival:
-			rival.demotivate()
-		if arena.rival_at(step) == null:
+		var enemy := arena.enemy_at(step)
+		if enemy:
+			enemy.hurt()
+		if arena.enemy_at(step) == null:
 			arena.move(self, step)
-		if cell != step and arena.rival_at(step) == null:
+		if cell != step and arena.enemy_at(step) == null:
 			break
 	arena.threaten(line + arena.grid.neighbors(cell).filter(func(near): return near not in line and near != start and not arena.is_obstacle(near)))
 
@@ -93,7 +93,7 @@ func is_next_to_player() -> bool:
 
 # ---- Its dash ----
 
-# The cells its dash would cross now: it stops before an obstacle or the edge. Rivals and
+# The cells its dash would cross now: it stops before an obstacle or the edge. Enemies and
 # the player don't shorten it, so the warning shows the whole line.
 func dash_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
@@ -109,34 +109,34 @@ func dash_cells() -> Array[Vector2i]:
 # ---- What the player does to it ----
 
 # A shove pushes it one cell and stuns it. If something is behind it, it stays and is
-# knocked; a rival behind it is knocked too.
+# knocked; an enemy behind it is knocked too.
 func shove(side: int) -> void:
 	var behind := arena.grid.step(cell, side)
 	if arena.is_free(behind):
 		stun(SHOVE_STUN)
 		arena.move(self, behind)
 		return
-	var other := arena.rival_at(behind)
+	var other := arena.enemy_at(behind)
 	arena.block(self, behind)
 	knock()
 	if other:
 		other.knock()
 
 
-# Hitting something hard stuns it longer and costs motivation.
+# Hitting something hard stuns it longer and costs health.
 func knock() -> void:
 	stun(KNOCK_STUN)
-	demotivate()
+	hurt()
 
 
 func stun(turns: int) -> void:
 	stunned_turns = turns
 
 
-# Thrown paperwork calls off a dash it warns of and costs motivation.
+# Thrown paperwork calls off a dash it warns of and costs health.
 func hit_by_paper() -> void:
 	cancel_dash()
-	demotivate()
+	hurt()
 
 
 # A dash it warns of is called off, and its countdown starts over.
@@ -146,10 +146,10 @@ func cancel_dash() -> void:
 		dash_side = HexGrid.NO_SIDE
 
 
-# A rival without motivation gives up and leaves.
-func demotivate() -> void:
-	motivation -= 1
-	if motivation <= 0:
+# An enemy without health gives up and leaves.
+func hurt() -> void:
+	health -= 1
+	if health <= 0:
 		arena.remove(self)
 
 
@@ -165,7 +165,7 @@ func label() -> String:
 
 
 func pips() -> int:
-	return motivation
+	return health
 
 
 func has_warning() -> bool:

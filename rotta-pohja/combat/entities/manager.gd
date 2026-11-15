@@ -1,5 +1,5 @@
 class_name Manager
-extends Rival
+extends Enemy
 
 # A manager never gives up and can't be shoved, knocked or hit with a desk. Thrown
 # paperwork keeps it busy for a while.
@@ -22,7 +22,7 @@ func hit_by_paper() -> void:
 	stun(PAPER_STUN)
 
 
-func demotivate() -> void:
+func hurt() -> void:
 	pass
 
 

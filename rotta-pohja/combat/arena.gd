@@ -19,7 +19,7 @@ signal combat_finished(won: bool)
 
 # A stage is a scene that inherits arena.tscn and sets these.
 @export var player_start := Vector2i(0, 3)
-@export var rival_starts: Array[Vector2i] = []
+@export var enemy_starts: Array[Vector2i] = []
 @export var intern_starts: Array[Vector2i] = []
 @export var manager_starts: Array[Vector2i] = []
 @export var desk_cells: Array[Vector2i] = []
@@ -34,9 +34,9 @@ signal combat_finished(won: bool)
 @export var goal_name := ""
 # Objective "queue number": the player wins after this many turns. -1 if the stage has none.
 @export var queue_turns := -1
-# Objective "defeat the rivals": the player wins when every rival has given up. It may be
+# Objective "defeat the rivals": the player wins when every enemy has given up. It may be
 # the only objective or stand beside another.
-@export var defeat_rivals := false
+@export var defeat_enemies := false
 
 # ---- Setup ----
 
@@ -88,26 +88,26 @@ func _ready() -> void:
 		add(Document.new(document_cells[number], number))
 	for cell in wet_cells:
 		add(WetFloor.new(cell))
-	for cell in rival_starts:
-		add_staggered(Rival.new(cell))
+	for cell in enemy_starts:
+		add_staggered(Enemy.new(cell))
 	for cell in intern_starts:
 		add_staggered(Intern.new(cell))
 	for cell in manager_starts:
 		add_staggered(Manager.new(cell))
-	# A rival that dashes on the first turn shows its line from the start.
-	for rival in rivals():
-		rival.aim()
+	# An enemy that dashes on the first turn shows its line from the start.
+	for enemy in enemies():
+		enemy.aim()
 	turns_left = queue_turns
 	view.animation_finished.connect(announce)
 	get_viewport().size_changed.connect(center_in_viewport)
 	center_in_viewport()
 
 
-# Rivals dash on different turns: each starts its countdown a turn later than the one
+# Enemies dash on different turns: each starts its countdown a turn later than the one
 # before, within how often it dashes.
-func add_staggered(rival: Rival) -> void:
-	rival.turns_until_dash += rivals().size() % rival.dash_every
-	add(rival)
+func add_staggered(enemy: Enemy) -> void:
+	enemy.turns_until_dash += enemies().size() % enemy.dash_every
+	add(enemy)
 
 
 # Centers everything the view shows, labels included, so none of it falls off the screen.
@@ -124,7 +124,7 @@ func add(entity: Entity) -> void:
 	report(entity_added, [entity])
 
 
-# The player or a rival that moves straight onto a wet cell slides on in that direction
+# The player or an enemy that moves straight onto a wet cell slides on in that direction
 # until the cell it is on is dry or the next one is taken.
 func move(entity: Entity, to: Vector2i) -> void:
 	var from := entity.cell
@@ -165,13 +165,13 @@ func entity_at(cell: Vector2i) -> Entity:
 	return null
 
 
-func rival_at(cell: Vector2i) -> Rival:
-	return entity_at(cell) as Rival
+func enemy_at(cell: Vector2i) -> Enemy:
+	return entity_at(cell) as Enemy
 
 
-func rivals() -> Array[Rival]:
-	var result: Array[Rival] = []
-	result.assign(entities.filter(func(entity): return entity is Rival))
+func enemies() -> Array[Enemy]:
+	var result: Array[Enemy] = []
+	result.assign(entities.filter(func(entity): return entity is Enemy))
 	return result
 
 
@@ -228,7 +228,7 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	report(entity_acted, [player])
 	if player.cell == goal_cell and not is_goal_locked():
 		end(true, "You reached the %s." % goal_name)
-	elif defeat_rivals and rivals().is_empty():
+	elif defeat_enemies and enemies().is_empty():
 		end(true, "Every rival gave up.")
 	else:
 		play_round()
@@ -255,7 +255,7 @@ func play_round() -> void:
 			report(entity_acted, [entity])
 
 
-# A rival's move takes the form on these cells.
+# An enemy's move takes the form on these cells.
 func threaten(cells: Array[Vector2i]) -> void:
 	if rehearsing:
 		forecast.append_array(cells)
@@ -316,7 +316,7 @@ func objective_text() -> String:
 		parts.append("Reach the %s." % goal_name if locks.is_empty() else "Get %s, then reach the %s." % [listed(locks), goal_name])
 	if turns_left > 0:
 		parts.append("Your number is called in %d %s." % [turns_left, "turn" if turns_left == 1 else "turns"])
-	if defeat_rivals:
+	if defeat_enemies:
 		parts.append("Make every rival give up." if parts.is_empty() else "Or make every rival give up.")
 	return " ".join(parts)
 

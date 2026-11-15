@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" path="res://combat/arena.tscn" id="1_arena"]
 
 [node name="Arena" instance=ExtResource("1_arena")]
-rival_starts = Array[Vector2i]([Vector2i(6, 0)])
+enemy_starts = Array[Vector2i]([Vector2i(6, 0)])
 manager_starts = Array[Vector2i]([Vector2i(6, 6)])
 chair_cells = Array[Vector2i]([Vector2i(1, 2), Vector2i(3, 5)])
 wet_cells = Array[Vector2i]([Vector2i(6, 2), Vector2i(6, 3), Vector2i(6, 4)])

@@ -1,11 +1,11 @@
 class_name Elevator
 extends Entity
 
-# Keeps bringing rivals: one steps out every few turns, when nothing stands on it.
+# Keeps bringing enemies: one steps out every few turns, when nothing stands on it.
 
 const EVERY := 4
 
-var turns_until_rival := EVERY
+var turns_until_enemy := EVERY
 
 
 func _init(start_cell: Vector2i) -> void:
@@ -15,10 +15,10 @@ func _init(start_cell: Vector2i) -> void:
 
 
 func take_turn() -> void:
-	turns_until_rival = max(0, turns_until_rival - 1)
-	if turns_until_rival == 0 and arena.is_free(cell):
-		turns_until_rival = EVERY
-		arena.add_staggered(Rival.new(cell))
+	turns_until_enemy = max(0, turns_until_enemy - 1)
+	if turns_until_enemy == 0 and arena.is_free(cell):
+		turns_until_enemy = EVERY
+		arena.add_staggered(Enemy.new(cell))
 
 
 func card() -> Card:
@@ -29,6 +29,6 @@ func color() -> Color:
 	return Color(0.75, 0.75, 0.85)
 
 
-# The turns until the next rival.
+# The turns until the next enemy.
 func label() -> String:
-	return str(turns_until_rival)
+	return str(turns_until_enemy)

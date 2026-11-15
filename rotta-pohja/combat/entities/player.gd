@@ -53,7 +53,7 @@ func move_or_shove(picked: Array[Vector2i]) -> void:
 # ---- Throw paperwork ----
 
 func can_throw_paper(_picked: Array[Vector2i], target: Vector2i) -> bool:
-	return arena.rival_at(target) != null
+	return arena.enemy_at(target) != null
 
 
 func throw_paper(picked: Array[Vector2i]) -> void:
@@ -61,28 +61,28 @@ func throw_paper(picked: Array[Vector2i]) -> void:
 	arena.add(paper)
 	arena.move(paper, picked[0])
 	arena.remove(paper)
-	arena.rival_at(picked[0]).hit_by_paper()
+	arena.enemy_at(picked[0]).hit_by_paper()
 
 
 # ---- Throw desk ----
 
 # First the desk, then where it lands. It can't land on a desk, a pillar, the goal or a
-# rival that can't be shoved.
+# enemy that can't be shoved.
 func can_throw_desk(picked: Array[Vector2i], target: Vector2i) -> bool:
 	if picked.is_empty():
 		return arena.is_throwable(target)
-	var rival := arena.rival_at(target)
-	return target != arena.goal_cell and not arena.is_obstacle(target) and (rival == null or rival.shovable)
+	var enemy := arena.enemy_at(target)
+	return target != arena.goal_cell and not arena.is_obstacle(target) and (enemy == null or enemy.shovable)
 
 
-# The desk moves to the cell. Landing on a rival, it breaks and knocks the rival.
+# The desk moves to the cell. Landing on an enemy, it breaks and knocks the enemy.
 func throw_desk(picked: Array[Vector2i]) -> void:
 	var desk := arena.entity_at(picked[0])
-	var rival := arena.rival_at(picked[1])
+	var enemy := arena.enemy_at(picked[1])
 	arena.move(desk, picked[1])
-	if rival:
+	if enemy:
 		arena.remove(desk)
-		rival.knock()
+		enemy.knock()
 
 
 # ---- Dash ----
@@ -103,9 +103,9 @@ func can_dash(_picked: Array[Vector2i], target: Vector2i) -> bool:
 	return arena.grid.has(between) and not arena.is_obstacle(between) and arena.is_free(target)
 
 
-# A rival it goes through loses motivation.
+# An enemy it goes through loses health.
 func dash(picked: Array[Vector2i]) -> void:
-	var rival := arena.rival_at(dash_over(picked[0]))
+	var enemy := arena.enemy_at(dash_over(picked[0]))
 	arena.move(self, picked[0])
-	if rival:
-		rival.demotivate()
+	if enemy:
+		enemy.hurt()
