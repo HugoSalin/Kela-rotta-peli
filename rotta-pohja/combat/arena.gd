@@ -161,7 +161,7 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 		for entity in entities.duplicate():
 			if finished:
 				break
-			if entity != player:
+			if entity != player and entity in entities:
 				entity.take_turn()
 				entity_acted.emit(entity)
 	if not finished and turns_left > 0:

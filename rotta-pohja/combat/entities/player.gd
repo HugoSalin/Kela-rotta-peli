@@ -83,7 +83,9 @@ func throw_paper(picked: Array[Vector2i]) -> void:
 	arena.add(paper)
 	arena.move(paper, picked[0])
 	arena.remove(paper)
-	arena.rival_at(picked[0]).demotivate()
+	var rival := arena.rival_at(picked[0])
+	rival.cancel_dash()
+	rival.demotivate()
 
 
 # ---- Throw desk ----

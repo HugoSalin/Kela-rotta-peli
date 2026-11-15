@@ -503,10 +503,25 @@ func test_several_rivals() -> void:
 	var dasher := arena.rivals()[1]
 	dasher.turns_until_dash = 1
 	dasher.dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
-	var lines := []
-	arena.entity_acted.connect(func(entity): if entity is Player or entity is Rival: lines.append(dasher.dash_cells()))
+	var ends := []
+	arena.entity_acted.connect(func(entity): if entity is Player or entity is Rival: ends.append([dasher.dash_cells(), dasher.dash_end()]))
 	press("SSE")
-	check("a rival that steps onto a dash line shortens it in its own turn, before the dash", [lines.slice(0, 2), dasher.cell], [[[Vector2i(4, 1), Vector2i(4, 2)], [Vector2i(4, 1)]], Vector2i(4, 1)])
+	check("a rival that steps onto a dash line keeps the line whole and moves its end, in its own turn", ends.slice(0, 2), [[[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 2)], [[Vector2i(4, 1), Vector2i(4, 2)], Vector2i(4, 1)]])
+	check("the dash stops before it and costs it motivation", [dasher.cell, arena.rivals()[0].cell, arena.rivals()[0].motivation], [Vector2i(4, 1), Vector2i(4, 2), 2])
+
+	setup(Vector2i(8, 6), 1, [Vector2i(4, 0), Vector2i(4, 1)])
+	arena.rivals()[1].stunned_turns = 99
+	arena.rivals()[1].motivation = 1
+	arena.rivals()[0].turns_until_dash = 1
+	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	press("E")
+	check("a dash passes through a rival, which here gives up and takes no turn", [arena.rivals().size(), arena.rivals()[0].cell], [1, Vector2i(4, 2)])
+
+	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
+	arena.rivals()[0].turns_until_dash = 1
+	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	press("2WWWWWWE")
+	check("thrown paperwork calls off a warned dash: the countdown starts over and the rival steps", [arena.rivals()[0].motivation, arena.rivals()[0].turns_until_dash, arena.rivals()[0].dash_side, arena.rivals()[0].cell, arena.danger_cells(), results], [2, 2, HexGrid.NO_SIDE, Vector2i(4, 3), [], []])
 
 	setup(Vector2i(0, 0), 1, [Vector2i(0, 1), Vector2i(0, 3)])
 	set_desks([Vector2i(1, 0)])
