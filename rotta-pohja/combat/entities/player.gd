@@ -72,7 +72,7 @@ func can_throw_desk(picked: Array[Vector2i], target: Vector2i) -> bool:
 	if picked.is_empty():
 		return arena.is_throwable(target)
 	var enemy := arena.enemy_at(target)
-	return target != arena.goal_cell and not arena.is_obstacle(target) and (enemy == null or enemy.shovable)
+	return not arena.is_goal(target) and not arena.is_obstacle(target) and (enemy == null or enemy.shovable)
 
 
 # The desk moves to the cell. Landing on an enemy, it breaks and knocks the enemy.

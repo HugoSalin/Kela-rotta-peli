@@ -20,6 +20,8 @@ var shovable := false
 var slippery := false
 # The goal can't be reached while it is on the board.
 var locks_goal := false
+# The player wins on its cell.
+var is_goal := false
 
 # ---- How it is shown ----
 

@@ -249,7 +249,7 @@ func test_turns() -> void:
 	check("the ending is announced once", results, [false])
 
 	setup(Vector2i(7, 3), [Vector2i(5, 3)])
-	arena.goal_cell = Vector2i(8, 3)
+	arena.add(Goal.new(Vector2i(8, 3)))
 	arena.goal_name = "HR desk"
 	arena.view.finish()
 	check("objective text for a place", arena.view.status_label.text, "Reach the HR desk.")
@@ -483,7 +483,7 @@ func test_throw_desk() -> void:
 	check("no desk next to the player: nothing to pick", arena.selection.action_cells(), [])
 	set_desks([Vector2i(4, 4)])
 	set_pillars([Vector2i(5, 4)])
-	arena.goal_cell = Vector2i(3, 4)
+	arena.add(Goal.new(Vector2i(3, 4)))
 	check("the desk next to the player can be picked", [arena.selection.reach(), arena.selection.action_cells()], [1, [Vector2i(4, 4)]])
 	press("WWE")
 	var landing := arena.selection.action_cells()
@@ -719,7 +719,7 @@ func test_chair() -> void:
 func test_keycard() -> void:
 	setup(Vector2i(4, 3), [FAR])
 	arena.enemies()[0].stunned_turns = 99
-	arena.goal_cell = Vector2i(4, 2)
+	arena.add(Goal.new(Vector2i(4, 2)))
 	arena.goal_name = "server"
 	arena.add(Keycard.new(Vector2i(4, 4)))
 	check("a key card locks the goal", arena.objective_text(), "Get the key card, then reach the server.")
@@ -838,14 +838,15 @@ func test_stages_can_be_won() -> void:
 # the goal, the turns still to wait, or the health the enemies have left.
 func remaining() -> int:
 	var result: int = max(arena.turns_left, 0)
-	if arena.grid.has(arena.goal_cell):
+	var goals := arena.goals()
+	if not goals.is_empty():
 		var at := arena.player.cell
 		var locks := arena.entities.filter(func(entity): return entity.locks_goal)
 		while not locks.is_empty():
 			locks.sort_custom(func(a, b): return arena.grid.distance(at, a.cell) < arena.grid.distance(at, b.cell))
 			result += arena.grid.distance(at, locks[0].cell)
 			at = locks.pop_front().cell
-		result += arena.grid.distance(at, arena.goal_cell)
+		result += arena.grid.distance(at, goals[0].cell)
 	elif result == 0:
 		for enemy in arena.enemies():
 			result += enemy.health

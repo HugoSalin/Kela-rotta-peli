@@ -11,8 +11,6 @@ const LINE_COLOR := Color(0.45, 0.48, 0.55)
 const ACTION_COLOR := Color(0.3, 0.5, 0.35)
 const RANGE_COLOR := Color(0.23, 0.33, 0.28)
 const DANGER_COLOR := Color(0.45, 0.1, 0.1)
-const GOAL_COLOR := Color(0.35, 0.6, 0.95)
-const LOCKED_GOAL_COLOR := Color(0.4, 0.42, 0.5)
 const WARNING_COLOR := Color(1.0, 0.85, 0.2)
 const SELECTION_COLOR := Color.WHITE
 
@@ -206,8 +204,6 @@ func refresh() -> void:
 
 func _draw() -> void:
 	draw_cells()
-	if grid.has(arena.goal_cell):
-		draw_polyline(hex_corners(grid.map_to_local(arena.goal_cell)), LOCKED_GOAL_COLOR if arena.is_goal_locked() else GOAL_COLOR, 6.0)
 	for entity in drawn:
 		if entity.shape == Entity.Shape.MARK and drawn[entity].visible:
 			draw_mark(entity)

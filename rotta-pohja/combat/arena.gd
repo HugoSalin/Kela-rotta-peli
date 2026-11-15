@@ -29,7 +29,7 @@ signal combat_finished(won: bool)
 @export var keycard_cells: Array[Vector2i] = []
 @export var document_cells: Array[Vector2i] = []
 @export var wet_cells: Array[Vector2i] = []
-# Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
+# Objective "reach a place": the goal is on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
 @export var goal_name := ""
 # Objective "queue number": the player wins after this many turns. -1 if the stage has none.
@@ -88,6 +88,8 @@ func _ready() -> void:
 		add(Document.new(document_cells[number], number))
 	for cell in wet_cells:
 		add(WetFloor.new(cell))
+	if grid.has(goal_cell):
+		add(Goal.new(goal_cell))
 	for cell in enemy_starts:
 		add_staggered(Enemy.new(cell))
 	for cell in intern_starts:
@@ -194,6 +196,14 @@ func is_wet(cell: Vector2i) -> bool:
 	return entities.any(func(entity): return entity.slippery and entity.cell == cell)
 
 
+func goals() -> Array[Entity]:
+	return entities.filter(func(entity): return entity.is_goal)
+
+
+func is_goal(cell: Vector2i) -> bool:
+	return goals().any(func(goal): return goal.cell == cell)
+
+
 func is_goal_locked() -> bool:
 	return entities.any(func(entity): return entity.locks_goal)
 
@@ -226,7 +236,7 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	start_round()
 	danger_is_stale = true
 	report(entity_acted, [player])
-	if player.cell == goal_cell and not is_goal_locked():
+	if is_goal(player.cell) and not is_goal_locked():
 		end(true, "You reached the %s." % goal_name)
 	elif defeat_enemies and enemies().is_empty():
 		end(true, "Every rival gave up.")
@@ -312,7 +322,7 @@ func announce() -> void:
 func objective_text() -> String:
 	var parts: Array[String] = []
 	var locks := entities.filter(func(entity): return entity.locks_goal).map(func(entity): return "the " + entity.title())
-	if grid.has(goal_cell):
+	if not goals().is_empty():
 		parts.append("Reach the %s." % goal_name if locks.is_empty() else "Get %s, then reach the %s." % [listed(locks), goal_name])
 	if turns_left > 0:
 		parts.append("Your number is called in %d %s." % [turns_left, "turn" if turns_left == 1 else "turns"])
