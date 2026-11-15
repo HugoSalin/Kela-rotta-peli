@@ -61,12 +61,18 @@ func take_turn() -> void:
 
 # ---- Its state ----
 
+# The names of each kind's variables, found once.
+static var variables: Dictionary[Script, Array] = {}
+
+
 # Its variables as they are now, to put it back as it was.
 func state() -> Dictionary:
+	var kind: Script = get_script()
+	if not variables.has(kind):
+		variables[kind] = get_property_list().filter(func(property): return property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE).map(func(property): return property.name)
 	var result := {}
-	for property in get_property_list():
-		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
-			result[property.name] = get(property.name)
+	for variable in variables[kind]:
+		result[variable] = get(variable)
 	return result
 
 

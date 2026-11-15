@@ -325,8 +325,16 @@ func test_shove() -> void:
 	arena.rivals()[0].cell = Vector2i(4, 2)
 	arena.rivals()[0].motivation = 1
 	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 3))
+	arena.defeat_rivals = true
+	check("a stage may ask for every rival to give up", arena.objective_text(), "Make every rival give up.")
 	press("WWE")
-	check("the last rival leaving wins", [arena.rivals().size(), results, arena.view.status_label.text], [0, [true], "Every rival gave up."])
+	check("then the last rival leaving wins", [arena.rivals().size(), results, arena.view.status_label.text], [0, [true], "Every rival gave up."])
+
+	setup(Vector2i(4, 3), [Vector2i(4, 2)])
+	set_desks([Vector2i(4, 1)])
+	arena.rivals()[0].motivation = 1
+	press("WWE")
+	check("on other stages it does not", [arena.rivals().size(), arena.finished], [0, false])
 
 	setup(Vector2i(4, 3), [Vector2i(4, 2)])
 	arena.rivals()[0].turns_until_dash = 1
@@ -410,6 +418,7 @@ func test_throw_paper() -> void:
 
 	setup(Vector2i(4, 5), [Vector2i(4, 3)])
 	arena.rivals()[0].motivation = 1
+	arena.defeat_rivals = true
 	press("2WWWWE")
 	check("a throw that takes the last motivation wins", [arena.rivals().size(), results], [0, [true]])
 
@@ -589,6 +598,7 @@ func test_intern() -> void:
 	press("AWE")
 	check("an intern without a line stays where it is: it can't walk", [intern.cell, intern.dash_side != HexGrid.NO_SIDE], [Vector2i(4, 4), true])
 	intern.stunned_turns = 99
+	arena.defeat_rivals = true
 	press("2")
 	arena.selection.pick(intern.cell)
 	arena.selection.select(1)
@@ -606,7 +616,7 @@ func test_stages_can_be_won() -> void:
 			arena.free()
 		arena = scene.instantiate()
 		root.add_child(arena)
-		var seen := {snapshot(): true}
+		var seen := {state_key(snapshot()): true}
 		var frontier := [snapshot()]
 		var can_win := false
 		while not frontier.is_empty() and not can_win:
@@ -618,39 +628,41 @@ func test_stages_can_be_won() -> void:
 						continue
 					restore(state)
 					arena.selection.pick(cell)
+					var after := snapshot()
 					if arena.won:
 						can_win = true
-					elif not arena.finished and not seen.has(snapshot()):
-						seen[snapshot()] = true
-						next.append(snapshot())
+					elif not arena.finished and not seen.has(state_key(after)):
+						seen[state_key(after)] = true
+						next.append(after)
 			frontier = next
 		check("%s can be won" % scene.resource_path.get_file(), can_win, true)
 
 
-func snapshot() -> Array:
-	return [arena.player.cell, arena.turns_left, desks(), arena.player.abilities.map(func(ability): return ability.turns_until_ready), arena.rivals().map(func(rival): return [rival.get_script(), rival.cell, rival.turns_until_dash, rival.motivation, rival.stunned_turns, rival.dash_side])]
+# The arena's own snapshot, with what else a turn changes.
+func snapshot() -> Dictionary:
+	var saved := arena.snapshot()
+	saved.turns_left = arena.turns_left
+	saved.cooldowns = arena.player.abilities.map(func(ability): return ability.turns_until_ready)
+	return saved
 
 
-func restore(state: Array) -> void:
+# What tells two snapshots apart, whichever entities hold the values.
+func state_key(saved: Dictionary) -> Array:
+	var values := func(state: Dictionary) -> Array: return state.values().filter(func(value): return typeof(value) != TYPE_OBJECT)
+	return [saved.turns_left, saved.cooldowns, saved.board.map(func(entity): return entity.get_script()), saved.states.map(values)]
+
+
+func restore(saved: Dictionary) -> void:
+	arena.restore(saved)
+	arena.paths = null
 	arena.finished = false
 	arena.won = false
 	arena.announced = false
-	arena.player.cell = state[0]
-	arena.turns_left = state[1]
-	set_desks(state[2])
+	arena.turns_left = saved.turns_left
 	for index in arena.player.abilities.size():
-		arena.player.abilities[index].turns_until_ready = state[3][index]
+		arena.player.abilities[index].turns_until_ready = saved.cooldowns[index]
 	arena.selection.ability = arena.player.abilities[0]
 	arena.selection.picks.clear()
-	for rival in arena.rivals():
-		arena.remove(rival)
-	for values in state[4]:
-		var rival: Rival = values[0].new(values[1])
-		rival.turns_until_dash = values[2]
-		rival.motivation = values[3]
-		rival.stunned_turns = values[4]
-		rival.dash_side = values[5]
-		arena.add(rival)
 
 
 func test_loop() -> void:
@@ -665,7 +677,7 @@ func test_loop() -> void:
 	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
 	loop.arena.combat_finished.emit(true)
 	await create_timer(0.1).timeout
-	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of %d" % stages.size()])
+	check("a win goes to the next stage", [loop.stage, loop.arena.objective_text(), loop.arena.rivals().size(), loop.floor_label.text], [1, "Your number is called in 8 turns. Or make every rival give up.", 2, "Floor 2 of %d" % stages.size()])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss on the second stage goes back to the first", loop.stage, 0)

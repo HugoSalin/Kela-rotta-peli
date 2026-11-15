@@ -28,6 +28,9 @@ signal combat_finished(won: bool)
 @export var goal_name := ""
 # Objective "queue number": the player wins after this many turns. -1 if the stage has none.
 @export var queue_turns := -1
+# Objective "defeat the rivals": the player wins when every rival has given up. It may be
+# the only objective or stand beside another.
+@export var defeat_rivals := false
 
 # ---- Setup ----
 
@@ -179,14 +182,13 @@ func has_line_of_sight(from: Vector2i, to: Vector2i) -> bool:
 # The turn is decided at once; the view then shows its changes one after another.
 func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	turn_started.emit()
-	var had_rivals := not rivals().is_empty()
 	used.use.call(picked)
 	start_round()
 	danger = danger_cells()
 	report(entity_acted, [player])
 	if player.cell == goal_cell:
 		end(true, "You reached the %s." % goal_name)
-	elif rivals().is_empty() and had_rivals:
+	elif defeat_rivals and rivals().is_empty():
 		end(true, "Every rival gave up.")
 	else:
 		play_round()
@@ -227,20 +229,27 @@ func take_form() -> void:
 
 # Finds the danger by playing the turns still to come, so it shows what the rules will do.
 func danger_cells() -> Array[Vector2i]:
-	var board := entities.duplicate()
-	var states := board.map(func(entity): return entity.state())
-	var still_waiting := waiting.duplicate()
+	var saved := snapshot()
 	rehearsing = true
 	forecast = []
 	if waiting.is_empty():
 		start_round()
 	play_round()
 	rehearsing = false
-	entities = board
-	for index in board.size():
-		board[index].restore(states[index])
-	waiting = still_waiting
+	restore(saved)
 	return forecast
+
+
+# The board as it is now: who is on it, each one's state, and who still waits to act.
+func snapshot() -> Dictionary:
+	return {"board": entities.duplicate(), "states": entities.map(func(entity): return entity.state()), "waiting": waiting.duplicate()}
+
+
+func restore(saved: Dictionary) -> void:
+	entities.assign(saved.board)
+	for index in entities.size():
+		entities[index].restore(saved.states[index])
+	waiting.assign(saved.waiting)
 
 
 # ---- The ending ----
@@ -266,6 +275,8 @@ func objective_text() -> String:
 		parts.append("Reach the %s." % goal_name)
 	if turns_left > 0:
 		parts.append("Your number is called in %d %s." % [turns_left, "turn" if turns_left == 1 else "turns"])
+	if defeat_rivals:
+		parts.append("Make every rival give up." if parts.is_empty() else "Or make every rival give up.")
 	return " ".join(parts)
 
 
