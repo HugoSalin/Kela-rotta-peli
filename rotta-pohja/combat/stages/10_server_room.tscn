@@ -4,7 +4,10 @@
 
 [node name="Arena" instance=ExtResource("1_arena")]
 rival_starts = Array[Vector2i]([Vector2i(8, 0)])
+elevator_cells = Array[Vector2i]([Vector2i(8, 6)])
+chair_cells = Array[Vector2i]([Vector2i(1, 5)])
 keycard_cells = Array[Vector2i]([Vector2i(4, 5)])
+wet_cells = Array[Vector2i]([Vector2i(5, 2), Vector2i(5, 3)])
 desk_cells = Array[Vector2i]([Vector2i(2, 5), Vector2i(3, 2), Vector2i(6, 1), Vector2i(6, 5)])
 pillar_cells = Array[Vector2i]([Vector2i(2, 2), Vector2i(4, 4), Vector2i(6, 3)])
 goal_cell = Vector2i(4, 0)
