@@ -2,7 +2,7 @@ class_name HexGrid
 extends TileMapLayer
 
 # The arena's cells and their geometry. A cell is Vector2i(column, row) on the flat-top hex
-# grid; other code asks here instead of doing arithmetic on cells (D1).
+# grid; other code asks here instead of doing arithmetic on cells.
 
 const COLUMNS := 9
 const ROWS := 7

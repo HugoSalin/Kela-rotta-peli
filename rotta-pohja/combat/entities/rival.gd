@@ -1,7 +1,7 @@
 class_name Rival
 extends Entity
 
-# A rival rat that hunts the player's form (D4).
+# A rival rat that hunts the player's form.
 
 # On every third turn a rival dashes: up to DASH_LENGTH cells in a straight line.
 const DASH_EVERY := 3

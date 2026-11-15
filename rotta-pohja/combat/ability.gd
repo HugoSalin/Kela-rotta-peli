@@ -1,7 +1,7 @@
 class_name Ability
 extends RefCounted
 
-# Something the player can do on a turn, chosen with a number key (D5).
+# Something the player can do on a turn, chosen with a number key.
 
 var title: String
 # Turns to wait after using it.

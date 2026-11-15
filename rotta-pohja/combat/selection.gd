@@ -2,7 +2,7 @@ class_name Selection
 extends Node
 
 # What the player is choosing with the keyboard: an ability, the cells it is used on, and
-# the cursor that picks them (D2, D5).
+# the cursor that picks them.
 
 signal changed
 

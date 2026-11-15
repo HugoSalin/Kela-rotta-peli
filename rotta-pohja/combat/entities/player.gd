@@ -1,7 +1,7 @@
 class_name Player
 extends Entity
 
-# The player's rat and what it can do on a turn: the abilities (D5).
+# The player's rat and what it can do on a turn: the abilities.
 
 # Turns a shoved rival skips: after hitting a desk or the arena's edge, and otherwise.
 const WALL_STUN := 2
@@ -11,6 +11,8 @@ const DESK_THROW_RANGE := 2
 # The dash lands two cells away; dash_over() relies on it.
 const DASH_REACH := 2
 const DASH_COOLDOWN := 3
+
+# ---- Abilities ----
 
 var abilities: Array[Ability] = [
 	Ability.new("Move / Shove", 0, [1], [""], can_move_or_shove, move_or_shove),

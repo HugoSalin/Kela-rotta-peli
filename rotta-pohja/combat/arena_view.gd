@@ -2,7 +2,7 @@ class_name ArenaView
 extends Node2D
 
 # Everything visible of the arena: the cells, the entities, the animation of a turn and the
-# labels. It follows the rules through their signals and never changes them (D6).
+# labels. It follows the rules through their signals and never changes them.
 
 signal animation_finished
 
@@ -215,7 +215,7 @@ func draw_warning(entity: Entity) -> void:
 	var line := drawn[entity].warning
 	if not line.is_empty():
 		var end := grid.map_to_local(line[-1])
-		draw_line(grid.map_to_local(entity.cell), end, WARNING_COLOR, 6.0)
+		draw_line(drawn[entity].position, end, WARNING_COLOR, 6.0)
 		draw_circle(end, 9.0, WARNING_COLOR)
 
 
@@ -230,8 +230,8 @@ func draw_piece(entity: Entity, center: Vector2) -> void:
 
 
 # Closed outline: the first corner is repeated at the end.
-func hex_corners(center: Vector2, scale := 1.0) -> PackedVector2Array:
-	var half := Vector2(grid.tile_set.tile_size) / 2 * scale
+func hex_corners(center: Vector2, size := 1.0) -> PackedVector2Array:
+	var half := Vector2(grid.tile_set.tile_size) / 2 * size
 	return [
 		center + Vector2(-half.x, 0),
 		center + Vector2(-half.x / 2, -half.y),

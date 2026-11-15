@@ -1,7 +1,7 @@
 class_name Desk
 extends Entity
 
-# Blocks movement but not throws, and can be thrown (D5).
+# Blocks movement but not throws, and can be thrown.
 
 
 func _init(start_cell: Vector2i) -> void:

@@ -233,29 +233,6 @@ func test_queue_number() -> void:
 	check("a grab on the last turn still loses", results, [false])
 
 
-func test_loop() -> void:
-	arena.free()
-	arena = null
-	var loop = load("res://combat/loop_prototype.tscn").instantiate()
-	loop.pause = 0.0
-	root.add_child(loop)
-	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 3"])
-	loop.arena.combat_finished.emit(false)
-	await create_timer(0.1).timeout
-	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
-	loop.arena.combat_finished.emit(true)
-	await create_timer(0.1).timeout
-	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 3"])
-	loop.arena.combat_finished.emit(false)
-	await create_timer(0.1).timeout
-	check("a loss on the second stage goes back to the first", loop.stage, 0)
-	for stage in 3:
-		loop.arena.combat_finished.emit(true)
-		await create_timer(0.1).timeout
-	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [2, "You got the job."])
-	loop.free()
-
-
 func test_dash() -> void:
 	setup(Vector2i(0, 3), 1, [Vector2i(8, 3)])
 	var steps: Array[int] = []
@@ -614,3 +591,26 @@ func restore(state: Array) -> void:
 		rival.stunned_turns = values[3]
 		rival.dash_side = values[4]
 		arena.add(rival)
+
+
+func test_loop() -> void:
+	arena.free()
+	arena = null
+	var loop = load("res://combat/loop_prototype.tscn").instantiate()
+	loop.pause = 0.0
+	root.add_child(loop)
+	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 3"])
+	loop.arena.combat_finished.emit(false)
+	await create_timer(0.1).timeout
+	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
+	loop.arena.combat_finished.emit(true)
+	await create_timer(0.1).timeout
+	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 3"])
+	loop.arena.combat_finished.emit(false)
+	await create_timer(0.1).timeout
+	check("a loss on the second stage goes back to the first", loop.stage, 0)
+	for stage in 3:
+		loop.arena.combat_finished.emit(true)
+		await create_timer(0.1).timeout
+	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [2, "You got the job."])
+	loop.free()

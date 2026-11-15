@@ -1,7 +1,7 @@
 class_name Entity
 extends RefCounted
 
-# Anything on the board (D6). A kind extends this and sets what differs.
+# Anything on the board. A kind extends this and sets what differs.
 
 enum Shape { HEX, CIRCLE }
 

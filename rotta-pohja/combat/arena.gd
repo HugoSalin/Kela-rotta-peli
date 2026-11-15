@@ -1,8 +1,8 @@
 class_name Arena
 extends Node2D
 
-# The rules of one combat: what is on the board, the turns, the objective and the ending
-# (D4). It reports every change to the board through generic signals (D6).
+# The rules of one combat: what is on the board, the turns, the objective and the ending.
+# It reports every change to the board through generic signals.
 
 signal entity_added(entity: Entity)
 signal entity_moved(entity: Entity, from: Vector2i, to: Vector2i)
@@ -27,6 +27,8 @@ signal combat_finished(won: bool)
 @export var goal_name := ""
 # Objective "queue number": the player wins after this many turns. -1 if the stage has none.
 @export var queue_turns := -1
+
+# ---- Setup ----
 
 @onready var grid: HexGrid = $Grid
 @onready var view: ArenaView = $View
