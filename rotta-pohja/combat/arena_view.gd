@@ -16,13 +16,28 @@ const WARNING_COLOR := Color(1.0, 0.85, 0.2)
 const SELECTION_COLOR := Color.WHITE
 
 
-# Where and whether an entity is drawn; it catches up with the entity during the animation.
+# How an entity looked at one moment of the turn.
+class Look:
+	var color: Color
+	var label: String
+	var pips: int
+	# The warning of its next move: the ring and the line.
+	var warned: bool
+	var warning: Array[Vector2i]
+
+	func _init(entity: Entity) -> void:
+		color = entity.color()
+		label = entity.label()
+		pips = entity.pips()
+		warned = entity.has_warning()
+		warning = entity.warning_cells()
+
+
+# Where, whether and how an entity is drawn; it catches up with the entity during the animation.
 class Drawn:
 	var position: Vector2
 	var visible := true
-	# The warning of its next move: the ring and the line.
-	var warned := false
-	var warning: Array[Vector2i] = []
+	var look: Look
 
 
 @onready var arena: Arena = get_parent()
@@ -32,8 +47,9 @@ class Drawn:
 @onready var ability_label: Label = $AbilityLabel
 
 var drawn: Dictionary[Entity, Drawn] = {}
-# The danger cells as they stood at this point of the animation.
+# The danger cells and the obstacles' cells as they stood at this point of the animation.
 var shown_danger: Array[Vector2i] = []
+var shown_obstacles: Array[Vector2i] = []
 # The animation of the turn; null when nothing is animating.
 var animation: Tween
 
@@ -43,7 +59,7 @@ func _ready() -> void:
 	arena.entity_moved.connect(_on_entity_moved)
 	arena.entity_blocked.connect(_on_entity_blocked)
 	arena.entity_removed.connect(_on_entity_removed)
-	arena.entity_acted.connect(show_preview.unbind(1))
+	arena.entity_acted.connect(show_state.unbind(1))
 	arena.turn_started.connect(_on_turn_started)
 	arena.turn_ended.connect(_on_turn_ended)
 	selection.changed.connect(refresh)
@@ -61,6 +77,7 @@ func _process(_delta: float) -> void:
 func _on_entity_added(entity: Entity) -> void:
 	var piece := Drawn.new()
 	piece.position = grid.map_to_local(entity.cell)
+	piece.look = Look.new(entity)
 	drawn[entity] = piece
 	if animation:
 		piece.visible = false
@@ -86,19 +103,22 @@ func _on_entity_removed(entity: Entity) -> void:
 		drawn.erase(entity)
 
 
-# The danger cells and warnings as the rules have them now. During a turn they are shown
-# once the animation gets here, so each action's effect on the preview is seen in its turn.
-func show_preview() -> void:
+# The danger cells, the obstacles and every entity's look as the rules have them now. During
+# a turn they are shown once the animation gets here, so each action's effect is seen in its turn.
+func show_state() -> void:
 	var danger := arena.danger_cells()
-	var warnings: Dictionary[Entity, Array] = {}
+	var obstacles: Array[Vector2i] = []
+	var looks: Dictionary[Entity, Look] = {}
 	for entity in arena.entities:
-		warnings[entity] = [entity.has_warning(), entity.warning_cells()]
+		looks[entity] = Look.new(entity)
+		if entity.solid and entity.obstacle:
+			obstacles.append(entity.cell)
 	var apply := func():
 		shown_danger = danger
-		for entity in warnings:
+		shown_obstacles = obstacles
+		for entity in looks:
 			if drawn.has(entity):
-				drawn[entity].warned = warnings[entity][0]
-				drawn[entity].warning.assign(warnings[entity][1])
+				drawn[entity].look = looks[entity]
 	if animation:
 		animation.tween_callback(apply)
 	else:
@@ -146,7 +166,7 @@ func bounds() -> Rect2:
 
 func refresh() -> void:
 	if not animation:
-		show_preview()
+		show_state()
 	status_label.text = arena.end_text if arena.announced else arena.objective_text()
 	var abilities := arena.player.abilities
 	var entries: Array[String] = []
@@ -187,7 +207,7 @@ func draw_cells() -> void:
 	var in_range := selection.range_cells()
 	var inner_marks: Dictionary[Vector2i, Color] = {}
 	for cell in grid.cells:
-		var obstacle := arena.is_obstacle(cell)
+		var obstacle := cell in shown_obstacles
 		var color := DANGER_COLOR if cell in shown_danger and not obstacle else FLOOR_COLOR
 		var mark := color
 		if cell in actions:
@@ -200,7 +220,7 @@ func draw_cells() -> void:
 			inner_marks[cell] = mark
 	for entity in drawn:
 		if entity.shape == Entity.Shape.HEX and drawn[entity].visible:
-			draw_hex(drawn[entity].position, entity.color())
+			draw_hex(drawn[entity].position, drawn[entity].look.color)
 	for cell in inner_marks:
 		draw_colored_polygon(hex_corners(grid.map_to_local(cell), 0.6), inner_marks[cell])
 
@@ -212,7 +232,7 @@ func draw_hex(center: Vector2, color: Color) -> void:
 
 # The line of the move an entity warns of, with a dot at its end.
 func draw_warning(entity: Entity) -> void:
-	var line := drawn[entity].warning
+	var line := drawn[entity].look.warning
 	if not line.is_empty():
 		var end := grid.map_to_local(line[-1])
 		draw_line(drawn[entity].position, end, WARNING_COLOR, 6.0)
@@ -220,12 +240,12 @@ func draw_warning(entity: Entity) -> void:
 
 
 func draw_piece(entity: Entity, center: Vector2) -> void:
-	draw_circle(center, entity.radius, entity.color())
-	draw_string(ThemeDB.fallback_font, center + Vector2(-20.0, 8.0), entity.label(), HORIZONTAL_ALIGNMENT_CENTER, 40.0, 22, SELECTION_COLOR)
-	var pips := entity.pips()
-	for index in pips:
-		draw_circle(center + Vector2((index - (pips - 1) / 2.0) * 10.0, -28.0), 3.5, SELECTION_COLOR)
-	if drawn[entity].warned:
+	var look := drawn[entity].look
+	draw_circle(center, entity.radius, look.color)
+	draw_string(ThemeDB.fallback_font, center + Vector2(-20.0, 8.0), look.label, HORIZONTAL_ALIGNMENT_CENTER, 40.0, 22, SELECTION_COLOR)
+	for index in look.pips:
+		draw_circle(center + Vector2((index - (look.pips - 1) / 2.0) * 10.0, -28.0), 3.5, SELECTION_COLOR)
+	if look.warned:
 		draw_arc(center, entity.radius + 6.0, 0.0, TAU, 32, WARNING_COLOR, 4.0)
 
 
