@@ -473,6 +473,7 @@ func test_dash_ability() -> void:
 	press("4")
 	var landings := arena.selection.action_cells()
 	check("key 4 chooses the dash: two cells away in the six directions, not onto a rival", [arena.selection.ability.title, arena.selection.reach(), landings.size(), Vector2i(4, 1) in landings, Vector2i(6, 4) in landings, Vector2i(5, 2) in landings], ["Dash", 2, 5, true, false, false])
+	check("its range is the six cells in those directions, not the whole ring", [arena.selection.range_cells().size(), Vector2i(6, 4) in arena.selection.range_cells(), Vector2i(5, 2) in arena.selection.range_cells()], [6, true, false])
 	set_desks([Vector2i(2, 2)])
 	set_pillars([Vector2i(5, 2)])
 	check("not onto a desk, not across a pillar", [Vector2i(2, 2) in arena.selection.action_cells(), Vector2i(6, 2) in arena.selection.action_cells()], [false, false])

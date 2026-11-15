@@ -12,13 +12,15 @@ var turns_until_ready := 0
 var min_reaches: Array[int]
 var reaches: Array[int]
 var prompts: Array[String]
+# It goes in one of the six straight directions, so its picks lie on those lines.
+var straight: bool
 # (picked: Array[Vector2i], cell: Vector2i) -> bool: may `cell` be the next pick?
 var can_pick: Callable
 # (picked: Array[Vector2i]): does it, once every cell is picked.
 var use: Callable
 
 
-func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable) -> void:
+func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable, a_straight := false) -> void:
 	title = a_title
 	cooldown = a_cooldown
 	min_reaches = a_min_reaches
@@ -26,3 +28,4 @@ func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reache
 	prompts = a_prompts
 	can_pick = a_can_pick
 	use = a_use
+	straight = a_straight

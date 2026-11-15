@@ -89,12 +89,14 @@ func min_reach() -> int:
 	return ability.min_reaches[picks.size()]
 
 
-# The cells the next pick reaches: in range and in sight of the player.
+# The cells the next pick reaches: in range and in sight of the player, and on a straight
+# line from the player if the ability goes straight.
 func range_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in grid.cells:
 		var distance := grid.distance(arena.player.cell, cell)
-		if distance >= min_reach() and distance <= reach() and arena.has_line_of_sight(arena.player.cell, cell):
+		var on_line := not ability.straight or grid.is_straight(arena.player.cell, cell)
+		if distance >= min_reach() and distance <= reach() and on_line and arena.has_line_of_sight(arena.player.cell, cell):
 			result.append(cell)
 	return result
 

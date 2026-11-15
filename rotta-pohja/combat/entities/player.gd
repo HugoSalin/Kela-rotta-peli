@@ -19,7 +19,7 @@ var abilities: Array[Ability] = [
 	Ability.new("Move / Shove", 0, [0], [1], [""], can_move_or_shove, move_or_shove),
 	Ability.new("Throw paperwork", 0, [PAPER_MIN_RANGE], [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
 	Ability.new("Throw desk", 0, [1, 1], [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
-	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], [DASH_REACH], ["Pick where you land."], can_dash, dash),
+	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], [DASH_REACH], ["Pick where you land."], can_dash, dash, true),
 ]
 var desk_throw := abilities[2]
 
