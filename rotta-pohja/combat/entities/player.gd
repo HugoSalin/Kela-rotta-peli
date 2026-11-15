@@ -8,7 +8,7 @@ const WALL_STUN := 2
 const SHOVE_STUN := 1
 const PAPER_MIN_RANGE := 2
 const PAPER_RANGE := 3
-const DESK_THROW_RANGE := 2
+const DESK_THROW_RANGE := 1
 # The dash lands two cells away; dash_over() relies on it.
 const DASH_REACH := 2
 const DASH_COOLDOWN := 3
