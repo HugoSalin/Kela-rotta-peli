@@ -6,6 +6,7 @@ extends Node
 const STAGES: Array[PackedScene] = [
 	preload("res://combat/stages/hr_desk.tscn"),
 	preload("res://combat/stages/queue_number.tscn"),
+	preload("res://combat/stages/elevator.tscn"),
 ]
 
 @onready var floor_label: Label = $FloorLabel

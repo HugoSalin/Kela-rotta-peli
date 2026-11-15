@@ -2,13 +2,15 @@ class_name Arena
 extends Node2D
 
 # The rules of one combat: what is on the board, the turns, the objective and the ending
-# (D4). It reports every change to the board through four signals (D6).
+# (D4). It reports every change to the board through generic signals (D6).
 
 signal entity_added(entity: Entity)
 signal entity_moved(entity: Entity, from: Vector2i, to: Vector2i)
 # It tried to move toward that cell and couldn't.
 signal entity_blocked(entity: Entity, toward: Vector2i)
 signal entity_removed(entity: Entity)
+# It has done what it does this turn; what follows may depend on it.
+signal entity_acted(entity: Entity)
 signal turn_started
 signal turn_ended
 signal combat_finished(won: bool)
@@ -45,8 +47,11 @@ func _ready() -> void:
 		add(Desk.new(cell))
 	for cell in pillar_cells:
 		add(Pillar.new(cell))
-	for cell in rival_starts:
-		add(Rival.new(cell))
+	# Rivals dash on different turns: each starts its countdown a turn later than the one before.
+	for index in rival_starts.size():
+		var rival := Rival.new(rival_starts[index])
+		rival.turns_until_dash += index % Rival.DASH_EVERY
+		add(rival)
 	player = Player.new(player_start)
 	add(player)
 	turns_left = queue_turns
@@ -140,11 +145,13 @@ func danger_cells() -> Array[Vector2i]:
 
 # ---- Turns ----
 
-# The player uses the ability on the picked cells; then every other entity acts.
+# The player uses the ability on the picked cells; then every other entity acts, one after
+# another, so one's action can change what the next one does.
 # The turn is decided at once; the view then shows its changes one after another.
 func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	turn_started.emit()
 	used.use.call(picked)
+	entity_acted.emit(player)
 	if player.cell == goal_cell:
 		end(true, "You reached the %s." % goal_name)
 	elif rivals().is_empty() and not rival_starts.is_empty():
@@ -154,7 +161,9 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 		for entity in entities.duplicate():
 			if finished:
 				break
-			entity.take_turn()
+			if entity != player:
+				entity.take_turn()
+				entity_acted.emit(entity)
 	if not finished and turns_left > 0:
 		turns_left -= 1
 		if turns_left == 0:
@@ -207,12 +216,16 @@ func build_paths() -> AStar2D:
 
 
 # The first cell on the mover's shortest path to `to`, around obstacles and whatever else
-# stands in the way; its own cell if there is no path.
+# stands in the way. If the others leave no way, the path as if they weren't there, so the
+# mover queues up behind them. Its own cell if there is no path at all.
 func path_step(mover: Entity, to: Vector2i) -> Vector2i:
 	var in_the_way := entities.filter(func(entity): return entity.solid and not entity.obstacle and entity != mover and entity.cell != to)
-	for entity in in_the_way:
-		paths.set_point_disabled(cell_id(entity.cell), true)
-	var path := paths.get_id_path(cell_id(mover.cell), cell_id(to))
-	for entity in in_the_way:
-		paths.set_point_disabled(cell_id(entity.cell), false)
-	return mover.cell if path.size() < 2 else Vector2i(path[1] % HexGrid.COLUMNS, path[1] / HexGrid.COLUMNS)
+	for avoided in [in_the_way, []]:
+		for entity in avoided:
+			paths.set_point_disabled(cell_id(entity.cell), true)
+		var path := paths.get_id_path(cell_id(mover.cell), cell_id(to))
+		for entity in avoided:
+			paths.set_point_disabled(cell_id(entity.cell), false)
+		if path.size() >= 2:
+			return Vector2i(path[1] % HexGrid.COLUMNS, path[1] / HexGrid.COLUMNS)
+	return mover.cell

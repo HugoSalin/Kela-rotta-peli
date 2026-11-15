@@ -92,6 +92,7 @@ func run() -> void:
 	test_throw_paper()
 	test_throw_desk()
 	test_signals()
+	test_several_rivals()
 	test_stages_can_be_won()
 	await test_loop()
 	print("%d checks, %d failed" % [checks, fails])
@@ -226,21 +227,20 @@ func test_loop() -> void:
 	var loop = load("res://combat/loop_prototype.tscn").instantiate()
 	loop.pause = 0.0
 	root.add_child(loop)
-	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 2"])
+	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 3"])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
 	loop.arena.combat_finished.emit(true)
 	await create_timer(0.1).timeout
-	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 2"])
+	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 3"])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss on the second stage goes back to the first", loop.stage, 0)
-	loop.arena.combat_finished.emit(true)
-	await create_timer(0.1).timeout
-	loop.arena.combat_finished.emit(true)
-	await create_timer(0.1).timeout
-	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [1, "You got the job."])
+	for stage in 3:
+		loop.arena.combat_finished.emit(true)
+		await create_timer(0.1).timeout
+	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [2, "You got the job."])
 	loop.free()
 
 
@@ -486,6 +486,30 @@ func test_signals() -> void:
 	arena.entity_removed.connect(func(entity): events.append("removed " + kind.call(entity)))
 	press("2WWWWE")
 	check("a paperwork throw reports the paper added, moved and removed, in that order", events, ["added Paperwork", "moved Paperwork", "removed Paperwork"])
+
+
+func test_several_rivals() -> void:
+	arena.free()
+	arena = load("res://combat/arena.tscn").instantiate()
+	arena.rival_starts.assign([FAR, Vector2i(8, 0), Vector2i(8, 3), Vector2i(0, 6)])
+	root.add_child(arena)
+	check("a stage's rivals start their dash countdowns a turn apart", arena.rivals().map(func(rival): return rival.turns_until_dash), [3, 4, 5, 3])
+
+	setup(Vector2i(6, 1), 1, [Vector2i(3, 2), Vector2i(4, 0)])
+	set_desks([Vector2i(4, 3)])
+	var dasher := arena.rivals()[1]
+	dasher.turns_until_dash = 1
+	dasher.dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	var lines := []
+	arena.entity_acted.connect(func(entity): if entity is Player or entity is Rival: lines.append(dasher.dash_cells()))
+	press("SSE")
+	check("a rival that steps onto a dash line shortens it in its own turn, before the dash", [lines.slice(0, 2), dasher.cell], [[[Vector2i(4, 1), Vector2i(4, 2)], [Vector2i(4, 1)]], Vector2i(4, 1)])
+
+	setup(Vector2i(0, 0), 1, [Vector2i(0, 1), Vector2i(0, 3)])
+	set_desks([Vector2i(1, 0)])
+	arena.rivals()[0].stunned_turns = 99
+	press("2SSE")
+	check("a rival with no way around another queues up behind it", [arena.rivals()[0].motivation, arena.rivals()[1].cell], [2, Vector2i(0, 2)])
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.

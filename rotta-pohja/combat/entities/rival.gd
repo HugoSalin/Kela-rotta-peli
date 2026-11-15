@@ -23,7 +23,7 @@ var dash_side := HexGrid.NO_SIDE
 # A stunned rival skips its turn. On every third turn it dashes along the line fixed when the
 # warning started, and takes the form if the player is on the line or next to where it ends.
 # Otherwise it takes the form if it is next to the player, or else steps along the shortest
-# path to the player.
+# path to the player, if that cell is free.
 func take_turn() -> void:
 	if stunned_turns > 0:
 		stunned_turns -= 1
@@ -51,7 +51,7 @@ func dash() -> void:
 
 func hunt() -> void:
 	var step := arena.path_step(self, arena.player.cell)
-	if step != cell:
+	if arena.is_free(step):
 		arena.move(self, step)
 	if turns_until_dash == 1:
 		dash_side = arena.grid.side_between(cell, arena.path_step(self, arena.player.cell))
