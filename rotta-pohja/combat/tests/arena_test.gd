@@ -342,7 +342,7 @@ func test_shove() -> void:
 func test_danger() -> void:
 	setup(Vector2i(0, 0), 1, [Vector2i(4, 3)])
 	var rival := arena.rivals[0]
-	check("danger is every cell next to a rival", arena.danger_cells().size(), 6)
+	check("a rival that acts normally marks no danger", arena.danger_cells(), [])
 	rival.stunned_turns = 1
 	check("a stunned rival is harmless", arena.danger_cells(), [])
 	rival.stunned_turns = 0
@@ -354,7 +354,7 @@ func test_danger() -> void:
 
 	setup(Vector2i(4, 5), 1, [Vector2i(4, 2)])
 	press("DWE")
-	check("moving next to a rival, as the danger cells say, loses", [Vector2i(5, 4) in arena.danger_cells(), results], [false, []])
+	check("moving next to a rival loses", [Vector2i(5, 4) in arena.danger_cells(), results], [false, []])
 	press("WWE")
 	check("and it does", results, [false])
 

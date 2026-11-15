@@ -51,7 +51,7 @@ const LINE_COLOR := Color(0.45, 0.48, 0.55)
 const ACTION_COLOR := Color(0.3, 0.5, 0.35)
 const RANGE_COLOR := Color(0.23, 0.33, 0.28)
 const DESK_COLOR := Color(0.42, 0.3, 0.2)
-const PILLAR_COLOR := Color(0.1, 0.1, 0.11)
+const PILLAR_COLOR := Color(0.15, 0.15, 0.17)
 const PAPER_COLOR := Color(0.95, 0.95, 0.9)
 const PLAYER_COLOR := Color(0.9, 0.85, 0.6)
 const RIVAL_COLOR := Color(0.85, 0.3, 0.3)
@@ -382,8 +382,8 @@ func dash_cells(rival: Rival) -> Array[Vector2i]:
 	return result
 
 
-# The cells where ending the turn loses the form: next to a rival that acts normally, and on
-# the line and around the end of a rival that dashes. A stunned rival is harmless.
+# The cells where a dash takes the form: the line and around the end of a rival that dashes.
+# A stunned rival is harmless.
 func danger_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for rival in rivals:
@@ -392,8 +392,6 @@ func danger_cells() -> Array[Vector2i]:
 		if rival.turns_until_dash == 1:
 			result.append_array(dash_cells(rival))
 			result.append_array(dash_grab_cells(rival))
-		else:
-			result.append_array(neighbors(rival.cell))
 	return result
 
 
@@ -578,7 +576,8 @@ func _draw() -> void:
 		elif cell in danger:
 			color = DANGER_COLOR
 		# What the player can pick is green, the rest of the ability's range a darker green:
-		# the whole cell on plain floor, a smaller hex inside a desk or a dangerous cell.
+		# the whole cell on plain floor, a smaller hex inside a desk or a dangerous cell
+		# (not under the player, whose own cell can't be picked).
 		var mark := color
 		if cell in actions:
 			mark = ACTION_COLOR
@@ -586,7 +585,7 @@ func _draw() -> void:
 			mark = RANGE_COLOR
 		draw_colored_polygon(hex_corners(cell), mark if color == FLOOR_COLOR else color)
 		draw_polyline(hex_corners(cell), LINE_COLOR, 2.0)
-		if color != FLOOR_COLOR and mark != color:
+		if color != FLOOR_COLOR and mark != color and cell != player_cell:
 			draw_colored_polygon(hex_corners(cell, 0.6), mark)
 	if cells.has(goal_cell):
 		draw_polyline(hex_corners(goal_cell), GOAL_COLOR, 6.0)
