@@ -385,6 +385,8 @@ func test_throw_paper() -> void:
 	setup(Vector2i(4, 5), 1, [Vector2i(4, 2), Vector2i(4, 0)])
 	arena.rivals()[0].stunned_turns = 99
 	arena.rivals()[1].stunned_turns = 99
+	# The game's abilities have no cooldown; this gives one a cooldown to check the mechanism.
+	arena.player.abilities[1].cooldown = 3
 	press("2")
 	check("key 2 chooses the throw: range 3, only rivals in range", [arena.selection.ability.title, arena.selection.reach, arena.selection.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
 	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk\nPick a rival.")
@@ -447,7 +449,7 @@ func test_throw_desk() -> void:
 	press("3")
 	check("choosing it again starts the picks over", [arena.selection.picks, arena.selection.reach], [[], 1])
 	press("WWEWWE")
-	check("the desk lands on the picked cell and the turn passes", [desks(), arena.rivals()[0].stunned_turns, arena.player.abilities[2].turns_until_ready, arena.selection.ability.title], [[Vector2i(4, 3)], 98, 3, "Move / Shove"])
+	check("the desk lands on the picked cell and the turn passes", [desks(), arena.rivals()[0].stunned_turns, arena.player.abilities[2].turns_until_ready, arena.selection.ability.title], [[Vector2i(4, 3)], 98, 0, "Move / Shove"])
 
 	setup(Vector2i(4, 5), 1, [Vector2i(4, 3)])
 	set_desks([Vector2i(4, 4)])

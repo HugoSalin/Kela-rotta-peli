@@ -8,12 +8,11 @@ const WALL_STUN := 2
 const SHOVE_STUN := 1
 const PAPER_RANGE := 3
 const DESK_THROW_RANGE := 2
-const THROW_COOLDOWN := 3
 
 var abilities: Array[Ability] = [
 	Ability.new("Move / Shove", 0, [1], [""], can_move_or_shove, move_or_shove),
-	Ability.new("Throw paperwork", THROW_COOLDOWN, [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
-	Ability.new("Throw desk", THROW_COOLDOWN, [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
+	Ability.new("Throw paperwork", 0, [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
+	Ability.new("Throw desk", 0, [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
 ]
 var desk_throw := abilities[2]
 
