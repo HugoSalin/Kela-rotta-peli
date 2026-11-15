@@ -71,6 +71,8 @@ var danger_is_stale := true
 
 
 func _ready() -> void:
+	player = Player.new(player_start)
+	add(player)
 	for cell in desk_cells:
 		add(Desk.new(cell))
 	for cell in pillar_cells:
@@ -89,8 +91,6 @@ func _ready() -> void:
 		add_staggered(Intern.new(cell))
 	for cell in manager_starts:
 		add_staggered(Manager.new(cell))
-	player = Player.new(player_start)
-	add(player)
 	# A rival that dashes on the first turn shows its line from the start.
 	for rival in rivals():
 		rival.aim()
