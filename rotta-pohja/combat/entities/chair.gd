@@ -1,8 +1,13 @@
 class_name Chair
 extends Entity
 
-# An office chair: shoved, it rolls straight on until something stops it, and a rival it
-# rolls into loses motivation. Otherwise it stands in the way like a desk.
+# An office chair: shoved, it rolls straight on and pushes the first rival it meets ahead
+# of it. A rival pushed into something is stunned, and a chair that met a rival is used up.
+# Otherwise it stands in the way like a desk.
+
+# How many cells it rolls at most.
+const REACH := 10
+const STUN := 4
 
 
 func _init(start_cell: Vector2i) -> void:
@@ -13,15 +18,24 @@ func _init(start_cell: Vector2i) -> void:
 
 
 func shove(side: int) -> void:
-	var next := arena.grid.step(cell, side)
-	if not arena.is_free(next):
-		arena.block(self, next)
-	while arena.is_free(next):
+	var rival: Rival = null
+	for rolled in REACH:
+		var next := arena.grid.step(cell, side)
+		if rival == null:
+			rival = arena.rival_at(next)
+		if rival:
+			var behind := arena.grid.step(rival.cell, side)
+			if not arena.is_free(behind):
+				arena.block(rival, behind)
+				rival.stun(STUN)
+				break
+			arena.move(rival, behind)
+		if not arena.is_free(next):
+			arena.block(self, next)
+			break
 		arena.move(self, next)
-		next = arena.grid.step(next, side)
-	var rival := arena.rival_at(next)
 	if rival:
-		rival.demotivate()
+		arena.remove(self)
 
 
 func color() -> Color:
