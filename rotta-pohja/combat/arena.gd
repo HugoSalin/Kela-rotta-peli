@@ -20,6 +20,7 @@ signal combat_finished(won: bool)
 # A stage is a scene that inherits arena.tscn and sets these.
 @export var player_start := Vector2i(0, 3)
 @export var rival_starts: Array[Vector2i] = []
+@export var intern_starts: Array[Vector2i] = []
 @export var desk_cells: Array[Vector2i] = []
 @export var pillar_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
@@ -49,17 +50,22 @@ func _ready() -> void:
 		add(Desk.new(cell))
 	for cell in pillar_cells:
 		add(Pillar.new(cell))
-	# Rivals dash on different turns: each starts its countdown a turn later than the one before.
-	for index in rival_starts.size():
-		var rival := Rival.new(rival_starts[index])
-		rival.turns_until_dash += index % Rival.DASH_EVERY
-		add(rival)
+	for cell in rival_starts:
+		add_staggered(Rival.new(cell))
+	for cell in intern_starts:
+		add_staggered(Intern.new(cell))
 	player = Player.new(player_start)
 	add(player)
 	turns_left = queue_turns
 	view.animation_finished.connect(announce)
 	get_viewport().size_changed.connect(center_in_viewport)
 	center_in_viewport()
+
+
+# Rivals dash on different turns: each starts its countdown a turn later than the one before.
+func add_staggered(rival: Rival) -> void:
+	rival.turns_until_dash += rivals().size() % Rival.DASH_EVERY
+	add(rival)
 
 
 # Centers everything the view shows, labels included, so none of it falls off the screen.
@@ -151,11 +157,12 @@ func danger_cells() -> Array[Vector2i]:
 # The turn is decided at once; the view then shows its changes one after another.
 func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	turn_started.emit()
+	var had_rivals := not rivals().is_empty()
 	used.use.call(picked)
 	entity_acted.emit(player)
 	if player.cell == goal_cell:
 		end(true, "You reached the %s." % goal_name)
-	elif rivals().is_empty() and not rival_starts.is_empty():
+	elif rivals().is_empty() and had_rivals:
 		end(true, "Every rival gave up.")
 	else:
 		paths = build_paths()

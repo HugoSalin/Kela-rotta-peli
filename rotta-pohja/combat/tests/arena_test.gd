@@ -416,7 +416,6 @@ func test_throw_paper() -> void:
 	check("but not between two", arena.selection.action_cells(), [])
 
 	setup(Vector2i(4, 5), [Vector2i(4, 3)])
-	arena.rival_starts.assign([Vector2i(4, 3)])
 	arena.rivals()[0].motivation = 1
 	press("2WWWWE")
 	check("a throw that takes the last motivation wins", [arena.rivals().size(), results], [0, [true]])
@@ -514,6 +513,7 @@ func test_several_rivals() -> void:
 	arena.rival_starts.assign([FAR, Vector2i(8, 0), Vector2i(8, 3), Vector2i(0, 6)])
 	root.add_child(arena)
 	check("a stage's rivals start their dash countdowns a turn apart", arena.rivals().map(func(rival): return rival.turns_until_dash), [3, 4, 5, 3])
+	test_intern()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -547,6 +547,35 @@ func test_several_rivals() -> void:
 	check("a rival with no way around another queues up behind it", arena.rivals()[1].cell, Vector2i(0, 2))
 
 
+func test_intern() -> void:
+	arena.free()
+	arena = load("res://combat/arena.tscn").instantiate()
+	arena.rival_starts.assign([FAR])
+	arena.intern_starts.assign([Vector2i(8, 0)])
+	root.add_child(arena)
+	check("a stage's interns come after its rivals and join their countdowns", arena.rivals().map(func(rival): return [rival is Intern, rival.turns_until_dash]), [[false, 3], [true, 4]])
+
+	setup(Vector2i(4, 6), [])
+	var intern := Intern.new(Vector2i(4, 1))
+	arena.add(intern)
+	arena.view.finish()
+	press("E")
+	check("an intern walks two cells a turn", intern.cell, Vector2i(4, 3))
+	press("E")
+	check("and stops next to the player", [intern.cell, results], [Vector2i(4, 5), []])
+	press("E")
+	check("where it takes the form", results, [false])
+
+	setup(Vector2i(4, 6), [])
+	intern = Intern.new(Vector2i(4, 4))
+	arena.add(intern)
+	intern.stunned_turns = 99
+	arena.view.finish()
+	press("2WWWWE")
+	press("2WWWWE")
+	check("an intern gives up after two throws", [arena.rivals().size(), results], [0, [true]])
+
+
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.
 # The throws are left out: with them the search takes too long, and a stage that can be won
 # without them can be won.
@@ -578,7 +607,7 @@ func test_stages_can_be_won() -> void:
 
 
 func snapshot() -> Array:
-	return [arena.player.cell, arena.turns_left, desks(), arena.player.abilities.map(func(ability): return ability.turns_until_ready), arena.rivals().map(func(rival): return [rival.cell, rival.turns_until_dash, rival.motivation, rival.stunned_turns, rival.dash_side])]
+	return [arena.player.cell, arena.turns_left, desks(), arena.player.abilities.map(func(ability): return ability.turns_until_ready), arena.rivals().map(func(rival): return [rival.get_script(), rival.cell, rival.turns_until_dash, rival.motivation, rival.stunned_turns, rival.dash_side])]
 
 
 func restore(state: Array) -> void:
@@ -595,11 +624,11 @@ func restore(state: Array) -> void:
 	for rival in arena.rivals():
 		arena.remove(rival)
 	for values in state[4]:
-		var rival := Rival.new(values[0])
-		rival.turns_until_dash = values[1]
-		rival.motivation = values[2]
-		rival.stunned_turns = values[3]
-		rival.dash_side = values[4]
+		var rival: Rival = values[0].new(values[1])
+		rival.turns_until_dash = values[2]
+		rival.motivation = values[3]
+		rival.stunned_turns = values[4]
+		rival.dash_side = values[5]
 		arena.add(rival)
 
 

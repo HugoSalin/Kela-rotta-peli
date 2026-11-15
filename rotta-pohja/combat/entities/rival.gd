@@ -12,6 +12,9 @@ const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 
 var turns_until_dash := DASH_EVERY
 var motivation := START_MOTIVATION
+# How many cells it walks on a turn.
+var speed := 1
+var body_color := COLOR
 # How many of its next turns it skips.
 var stunned_turns := 0
 # The side its next dash goes; set when the dash warning starts. NO_SIDE before.
@@ -23,8 +26,8 @@ var dash_side := HexGrid.NO_SIDE
 # A stunned rival skips its turn. On every third turn it dashes along the line fixed when the
 # warning started, through other rivals, and takes the form if the player is on the line or
 # next to where it ends.
-# Otherwise it takes the form if it is next to the player, or else steps along the shortest
-# path to the player, if that cell is free.
+# Otherwise it takes the form if it is next to the player, or else walks along the shortest
+# path to the player, as far as its speed and the free cells allow.
 func take_turn() -> void:
 	if stunned_turns > 0:
 		stunned_turns -= 1
@@ -57,9 +60,10 @@ func dash() -> void:
 
 
 func hunt() -> void:
-	var step := arena.path_step(self, arena.player.cell)
-	if arena.is_free(step):
-		arena.move(self, step)
+	for walked in speed:
+		var step := arena.path_step(self, arena.player.cell)
+		if arena.is_free(step):
+			arena.move(self, step)
 	if turns_until_dash == 1:
 		dash_side = arena.grid.side_between(cell, arena.path_step(self, arena.player.cell))
 
@@ -132,7 +136,7 @@ func demotivate() -> void:
 # ---- How it is shown ----
 
 func color() -> Color:
-	return STUNNED_COLOR if stunned_turns > 0 else COLOR
+	return STUNNED_COLOR if stunned_turns > 0 else body_color
 
 
 # One Z for each turn it still skips.
