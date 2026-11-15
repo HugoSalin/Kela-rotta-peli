@@ -62,6 +62,22 @@ func press_one(key: String) -> void:
 	arena.selection._unhandled_input(event)
 
 
+# The ability buttons' texts and the prompt under them.
+func ability_line() -> String:
+	return "   ".join(arena.view.ability_buttons.map(func(button): return button.text)) + "\n" + arena.view.prompt_label.text
+
+
+# Moves the mouse to the cell and, if asked, clicks there.
+func mouse(cell: Vector2i, click := false) -> void:
+	var event: InputEventMouse = InputEventMouseButton.new() if click else InputEventMouseMotion.new()
+	event.position = arena.grid.get_global_transform_with_canvas() * arena.grid.map_to_local(cell)
+	if click:
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = true
+	arena.selection._unhandled_input(event)
+	arena.view.finish()
+
+
 # Presses the keys and skips the animation of the last turn.
 func press(keys: String) -> void:
 	for key in keys:
@@ -95,6 +111,7 @@ func run() -> void:
 	test_dash_ability()
 	await test_signals()
 	test_several_rivals()
+	test_mouse()
 	test_stages_can_be_won()
 	await test_loop()
 	print("%d checks, %d failed" % [checks, fails])
@@ -122,11 +139,24 @@ func test_grid() -> void:
 
 func test_layout() -> void:
 	setup(Vector2i(4, 3), [])
-	press("3")
 	var shown := arena.view.bounds()
-	var text_bottom := arena.view.ability_label.position.y + arena.view.ability_label.get_minimum_size().y
-	check("a two-line prompt stays inside what the arena shows", [arena.view.ability_label.text.count("\n"), text_bottom <= shown.end.y], [1, true])
+	check("the ability buttons fit in their bar", arena.view.ability_bar.get_combined_minimum_size().x <= arena.view.ability_bar.size.x, true)
 	check("which is centered and no taller than the game's window", [arena.position + shown.get_center(), shown.size.y <= ProjectSettings.get_setting("display/window/size/viewport_height")], [root.get_visible_rect().size / 2, true])
+
+
+func test_mouse() -> void:
+	setup(Vector2i(4, 3), [Vector2i(4, 0)])
+	arena.rivals()[0].stunned_turns = 99
+	mouse(Vector2i(4, 2))
+	check("the mouse puts the cursor on the cell under it", [arena.selection.point, arena.player.cell], [arena.selection.cell_to_point(Vector2i(4, 2)), Vector2i(4, 3)])
+	mouse(Vector2i(8, 6))
+	check("but not outside the reach", arena.selection.point, arena.selection.cell_to_point(Vector2i(4, 2)))
+	mouse(Vector2i(4, 2), true)
+	check("a click picks the cell", arena.player.cell, Vector2i(4, 2))
+	arena.view.ability_buttons[1].pressed.emit()
+	check("a click on an ability's button chooses it", arena.selection.ability.title, "Throw paperwork")
+	mouse(Vector2i(4, 0), true)
+	check("and a click on a rival throws", arena.rivals()[0].motivation, 2)
 
 
 func test_cursor() -> void:
@@ -378,13 +408,13 @@ func test_throw_paper() -> void:
 	arena.player.abilities[1].cooldown = 3
 	press("2")
 	check("key 2 chooses the throw: range 2 to 3, only rivals in range", [arena.selection.ability.title, arena.selection.min_reach(), arena.selection.reach(), arena.selection.action_cells()], ["Throw paperwork", 2, 3, [Vector2i(4, 2)]])
-	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk   [4] Dash\nPick a rival.")
+	check("the ability line marks it", ability_line(), "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk   [4] Dash\nPick a rival.")
 	press("1")
 	check("key 1 goes back", [arena.selection.ability.title, arena.selection.reach()], ["Move / Shove", 1])
 	press("2WWWWWWE")
 	check("a throw costs motivation, takes the turn and goes back to moving", [arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns, arena.selection.ability.title, arena.player.abilities[1].turns_until_ready], [2, 98, "Move / Shove", 3])
 	check("the cursor returns from outside the range", arena.selection.point, arena.selection.cell_to_point(Vector2i(4, 5)))
-	check("the ability line shows the cooldown", arena.view.ability_label.text, "> [1] Move / Shove   [2] Throw paperwork (3)   [3] Throw desk   [4] Dash\n")
+	check("the ability line shows the cooldown", ability_line(), "> [1] Move / Shove   [2] Throw paperwork (3)   [3] Throw desk   [4] Dash\n")
 	press("2")
 	check("it can't be chosen while cooling down", arena.selection.ability.title, "Move / Shove")
 	var waits: Array[int] = []

@@ -2,7 +2,7 @@ class_name ArenaView
 extends Node2D
 
 # Everything visible of the arena: the cells, the entities, the animation of a turn and the
-# labels. It follows the rules through their signals and never changes them.
+# labels and buttons. It follows the rules through their signals and never changes them.
 
 signal animation_finished
 
@@ -45,7 +45,8 @@ class Drawn:
 @onready var grid: HexGrid = $"../Grid"
 @onready var selection: Selection = $"../Selection"
 @onready var status_label: Label = $StatusLabel
-@onready var ability_label: Label = $AbilityLabel
+@onready var ability_bar: HBoxContainer = $AbilityBar
+@onready var prompt_label: Label = $PromptLabel
 
 var drawn: Dictionary[Entity, Drawn] = {}
 # The danger cells and the obstacles' cells as they stood at this point of the animation.
@@ -53,6 +54,8 @@ var shown_danger: Array[Vector2i] = []
 var shown_obstacles: Array[Vector2i] = []
 # The animation of the turn; null when nothing is animating.
 var animation: Tween
+# One per ability, in the order of the player's list.
+var ability_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -64,6 +67,17 @@ func _ready() -> void:
 	arena.turn_started.connect(_on_turn_started)
 	arena.turn_ended.connect(_on_turn_ended)
 	selection.changed.connect(refresh)
+	arena.ready.connect(build_ability_bar)
+
+
+# A button for each ability; clicking it chooses the ability, as its number key does.
+func build_ability_bar() -> void:
+	for index in arena.player.abilities.size():
+		var button := Button.new()
+		button.focus_mode = Control.FOCUS_NONE
+		button.pressed.connect(selection.select.bind(index))
+		ability_bar.add_child(button)
+		ability_buttons.append(button)
 
 
 func _process(_delta: float) -> void:
@@ -157,7 +171,7 @@ func position_of(entity: Entity) -> Vector2:
 # The rectangle around everything shown: the cells and the labels.
 func bounds() -> Rect2:
 	var half := Vector2(grid.tile_set.tile_size) / 2
-	var result := status_label.get_rect().merge(ability_label.get_rect())
+	var result := status_label.get_rect().merge(ability_bar.get_rect()).merge(prompt_label.get_rect())
 	for cell in grid.cells:
 		result = result.merge(Rect2(grid.map_to_local(cell) - half, half * 2))
 	return result
@@ -170,13 +184,13 @@ func refresh() -> void:
 		show_state()
 	status_label.text = arena.end_text if arena.announced else arena.objective_text()
 	var abilities := arena.player.abilities
-	var entries: Array[String] = []
-	for index in abilities.size():
+	for index in ability_buttons.size():
 		var entry := "[%d] %s" % [index + 1, abilities[index].title]
 		if abilities[index].turns_until_ready > 0:
 			entry += " (%d)" % abilities[index].turns_until_ready
-		entries.append("> " + entry if abilities[index] == selection.ability else entry)
-	ability_label.text = "   ".join(entries) + "\n" + selection.ability.prompts[selection.picks.size()]
+		ability_buttons[index].text = "> " + entry if abilities[index] == selection.ability else entry
+		ability_buttons[index].disabled = abilities[index].turns_until_ready > 0
+	prompt_label.text = selection.ability.prompts[selection.picks.size()]
 	queue_redraw()
 
 

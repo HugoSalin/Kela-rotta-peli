@@ -1,8 +1,8 @@
 class_name Selection
 extends Node
 
-# What the player is choosing with the keyboard: an ability, the cells it is used on, and
-# the cursor that picks them.
+# What the player is choosing with the keyboard or the mouse: an ability, the cells it is
+# used on, and the cursor that picks them.
 
 signal changed
 
@@ -39,6 +39,8 @@ func start() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if arena.finished:
 		return
+	if event is InputEventMouse:
+		point_at(grid.local_to_map(grid.make_input_local(event).position), event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT)
 	for action in CURSOR_STEPS:
 		if event.is_action_pressed(action):
 			move(CURSOR_STEPS[action])
@@ -49,6 +51,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		pick(point_to_cell(point))
 
 
+# The mouse puts the cursor on the cell under it, and a click there confirms.
+func point_at(cell: Vector2i, clicked: bool) -> void:
+	if not is_cell_allowed(cell):
+		return
+	if point != cell_to_point(cell):
+		point = cell_to_point(cell)
+		changed.emit()
+	if clicked and cell in action_cells():
+		pick(cell)
+
+
 # ---- Ability and picks ----
 
 # Back to the first ability, so there is always a chosen one.
@@ -56,7 +69,7 @@ func reset() -> void:
 	choose(arena.player.abilities[0])
 
 
-# A key chooses an ability, unless it is cooling down.
+# A key or a click on its button chooses an ability, unless it is cooling down.
 func select(index: int) -> void:
 	if arena.player.abilities[index].turns_until_ready == 0:
 		choose(arena.player.abilities[index])

@@ -27,8 +27,15 @@ offset_bottom = -10.0
 theme_override_font_sizes/font_size = 24
 horizontal_alignment = 1
 
-[node name="AbilityLabel" type="Label" parent="View"]
-offset_top = 532.0
+[node name="AbilityBar" type="HBoxContainer" parent="View"]
+offset_top = 524.0
+offset_right = 560.0
+offset_bottom = 556.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="PromptLabel" type="Label" parent="View"]
+offset_top = 560.0
 offset_right = 560.0
 offset_bottom = 584.0
 theme_override_font_sizes/font_size = 16
