@@ -133,6 +133,15 @@ func position_of(entity: Entity) -> Vector2:
 	return drawn[entity].position
 
 
+# The rectangle around everything shown: the cells and the labels.
+func bounds() -> Rect2:
+	var half := Vector2(grid.tile_set.tile_size) / 2
+	var result := status_label.get_rect().merge(ability_label.get_rect())
+	for cell in grid.cells:
+		result = result.merge(Rect2(grid.map_to_local(cell) - half, half * 2))
+	return result
+
+
 # ---- Labels ----
 
 func refresh() -> void:

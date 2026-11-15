@@ -83,6 +83,7 @@ func _initialize() -> void:
 
 func run() -> void:
 	test_grid()
+	test_layout()
 	test_cursor()
 	test_turns()
 	test_queue_number()
@@ -117,6 +118,15 @@ func test_grid() -> void:
 	check("cells to pick in the middle: the neighbors and the player's own", arena.selection.action_cells().size(), 7)
 	setup(Vector2i(0, 0), 1, [])
 	check("cells to pick in a corner", arena.selection.action_cells().size(), 3)
+
+
+func test_layout() -> void:
+	setup(Vector2i(4, 3), 1, [])
+	press("3")
+	var shown := arena.view.bounds()
+	var text_bottom := arena.view.ability_label.position.y + arena.view.ability_label.get_minimum_size().y
+	check("a two-line prompt stays inside what the arena shows", [arena.view.ability_label.text.count("\n"), text_bottom <= shown.end.y], [1, true])
+	check("which is centered and no taller than the game's window", [arena.position + shown.get_center(), shown.size.y <= ProjectSettings.get_setting("display/window/size/viewport_height")], [root.get_visible_rect().size / 2, true])
 
 
 func test_cursor() -> void:

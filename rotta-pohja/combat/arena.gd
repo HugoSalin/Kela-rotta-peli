@@ -60,10 +60,9 @@ func _ready() -> void:
 	center_in_viewport()
 
 
+# Centers everything the view shows, labels included, so none of it falls off the screen.
 func center_in_viewport() -> void:
-	var first := grid.map_to_local(Vector2i.ZERO)
-	var last := grid.map_to_local(Vector2i(HexGrid.COLUMNS - 1, HexGrid.ROWS - 1))
-	position = get_viewport_rect().size / 2 - (first + last) / 2
+	position = get_viewport_rect().size / 2 - view.bounds().get_center()
 
 
 # ---- Changing the board ----
