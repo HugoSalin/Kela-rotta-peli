@@ -26,12 +26,12 @@ var point: Vector2i
 
 func _ready() -> void:
 	arena.ready.connect(start)
-	arena.turn_ended.connect(select.bind(0))
+	arena.turn_ended.connect(reset)
 
 
 func start() -> void:
 	point = cell_to_point(arena.player.cell)
-	select(0)
+	reset()
 
 
 # ---- Input ----
@@ -51,15 +51,26 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ---- Ability and picks ----
 
-# Choosing an ability again starts its picks over; one that is cooling down can't be chosen.
+# Back to the first ability, so there is always a chosen one.
+func reset() -> void:
+	choose(arena.player.abilities[0])
+
+
+# A key chooses an ability, unless it is cooling down.
 func select(index: int) -> void:
 	if arena.player.abilities[index].turns_until_ready == 0:
-		ability = arena.player.abilities[index]
-		picks.clear()
-		update()
+		choose(arena.player.abilities[index])
 
 
-# Picking a desk starts the desk throw with it, whatever ability was chosen.
+# Choosing an ability again starts its picks over.
+func choose(chosen: Ability) -> void:
+	ability = chosen
+	picks.clear()
+	update()
+
+
+# A desk picked first goes on as the desk throw, with the desk as its first pick. Moving
+# offers a desk only while the throw is ready.
 func pick(cell: Vector2i) -> void:
 	if picks.is_empty() and arena.is_throwable(cell):
 		ability = arena.player.desk_throw
