@@ -7,6 +7,9 @@ const STAGES: Array[PackedScene] = [
 	preload("res://combat/stages/hr_desk.tscn"),
 	preload("res://combat/stages/queue_number.tscn"),
 	preload("res://combat/stages/elevator.tscn"),
+	preload("res://combat/stages/mailroom.tscn"),
+	preload("res://combat/stages/waiting_room.tscn"),
+	preload("res://combat/stages/managers_office.tscn"),
 ]
 
 @onready var floor_label: Label = $FloorLabel

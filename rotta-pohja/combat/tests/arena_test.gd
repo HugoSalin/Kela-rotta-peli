@@ -638,18 +638,18 @@ func test_loop() -> void:
 	var loop = load("res://combat/loop_prototype.tscn").instantiate()
 	loop.pause = 0.0
 	root.add_child(loop)
-	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 3"])
+	check("starts on the first stage", [loop.stage, loop.arena.goal_name, loop.floor_label.text], [0, "HR desk", "Floor 1 of 6"])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss restarts the first stage", [loop.stage, loop.arena.finished], [0, false])
 	loop.arena.combat_finished.emit(true)
 	await create_timer(0.1).timeout
-	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 3"])
+	check("a win goes to the next stage", [loop.stage, loop.arena.queue_turns, loop.arena.rivals().size(), loop.floor_label.text], [1, 8, 2, "Floor 2 of 6"])
 	loop.arena.combat_finished.emit(false)
 	await create_timer(0.1).timeout
 	check("a loss on the second stage goes back to the first", loop.stage, 0)
-	for stage in 3:
+	for stage in STAGES.size():
 		loop.arena.combat_finished.emit(true)
 		await create_timer(0.1).timeout
-	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [2, "You got the job."])
+	check("winning the last stage ends the run", [loop.stage, loop.floor_label.text], [STAGES.size() - 1, "You got the job."])
 	loop.free()
