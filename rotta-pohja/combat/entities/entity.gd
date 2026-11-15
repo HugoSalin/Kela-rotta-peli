@@ -74,6 +74,13 @@ func card() -> Card:
 	return null
 
 
+# ---- Coming onto the board ----
+
+# A stage or an elevator has put it on the board.
+func placed() -> void:
+	pass
+
+
 # ---- What the player does to it ----
 
 # The player shoves it toward that side.

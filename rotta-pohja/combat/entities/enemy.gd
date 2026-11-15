@@ -30,6 +30,14 @@ func _init(start_cell: Vector2i) -> void:
 	shovable = true
 
 
+# ---- Coming onto the board ----
+
+# Enemies dash on different turns: each starts its countdown a turn later than the one
+# before, within how often it dashes.
+func placed() -> void:
+	turns_until_dash += arena.enemies().find(self) % dash_every
+
+
 # ---- Its turn ----
 
 # A stunned enemy skips its turn. When its countdown ends it dashes along the line fixed

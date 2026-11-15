@@ -17,20 +17,9 @@ signal combat_finished(won: bool)
 
 # ---- The stage ----
 
-# A stage is a scene that inherits arena.tscn and sets these.
-@export var player_start := Vector2i(0, 3)
-@export var enemy_starts: Array[Vector2i] = []
-@export var intern_starts: Array[Vector2i] = []
-@export var manager_starts: Array[Vector2i] = []
-@export var desk_cells: Array[Vector2i] = []
-@export var pillar_cells: Array[Vector2i] = []
-@export var elevator_cells: Array[Vector2i] = []
-@export var chair_cells: Array[Vector2i] = []
-@export var keycard_cells: Array[Vector2i] = []
-@export var document_cells: Array[Vector2i] = []
-@export var wet_cells: Array[Vector2i] = []
-# Objective "reach a place": the goal is on this cell. NO_CELL if the stage has none.
-@export var goal_cell := HexGrid.NO_CELL
+# A stage is a scene that inherits arena.tscn: its room is painted on Background, its pieces
+# on Entities, and it sets these.
+# Objective "reach a place": the stage has a goal, which this names.
 @export var goal_name := ""
 # Objective "queue number": the player wins after this many turns. -1 if the stage has none.
 @export var queue_turns := -1
@@ -41,6 +30,7 @@ signal combat_finished(won: bool)
 # ---- Setup ----
 
 @onready var grid: HexGrid = $Background
+@onready var entity_tiles: TileMapLayer = $Entities
 @onready var view: ArenaView = $View
 @onready var selection: Selection = $Selection
 
@@ -72,30 +62,14 @@ var danger_is_stale := true
 
 
 func _ready() -> void:
-	player = Player.new(player_start)
-	add(player)
-	for cell in desk_cells:
-		add(Desk.new(cell))
-	for cell in pillar_cells:
-		add(Pillar.new(cell))
-	for cell in elevator_cells:
-		add(Elevator.new(cell))
-	for cell in chair_cells:
-		add(Chair.new(cell))
-	for cell in keycard_cells:
-		add(Keycard.new(cell))
-	for number in document_cells.size():
-		add(Document.new(document_cells[number], number))
-	for cell in wet_cells:
-		add(WetFloor.new(cell))
-	if grid.has(goal_cell):
-		add(Goal.new(goal_cell))
-	for cell in enemy_starts:
-		add_staggered(Enemy.new(cell))
-	for cell in intern_starts:
-		add_staggered(Intern.new(cell))
-	for cell in manager_starts:
-		add_staggered(Manager.new(cell))
+	# The pieces move and a tile doesn't, so the view draws them and the tiles are hidden.
+	entity_tiles.hide()
+	var painted := entity_tiles.get_used_cells()
+	painted.sort()
+	for cell in painted:
+		place(Kinds.create(entity_tiles.get_cell_tile_data(cell).get_custom_data("kind"), cell))
+	if player == null:
+		push_error("The stage has no player tile.")
 	# An enemy that dashes on the first turn shows its line from the start.
 	for enemy in enemies():
 		enemy.aim()
@@ -105,19 +79,18 @@ func _ready() -> void:
 	center_in_viewport()
 
 
-# Enemies dash on different turns: each starts its countdown a turn later than the one
-# before, within how often it dashes.
-func add_staggered(enemy: Enemy) -> void:
-	enemy.turns_until_dash += enemies().size() % enemy.dash_every
-	add(enemy)
-
-
 # Centers everything the view shows, labels included, so none of it falls off the screen.
 func center_in_viewport() -> void:
 	position = get_viewport_rect().size / 2 - view.bounds().get_center()
 
 
 # ---- Changing the board ----
+
+# A piece a stage or an elevator puts on the board, which then settles in.
+func place(entity: Entity) -> void:
+	add(entity)
+	entity.placed()
+
 
 func add(entity: Entity) -> void:
 	entity.arena = self

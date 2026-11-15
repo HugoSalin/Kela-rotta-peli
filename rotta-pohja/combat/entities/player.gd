@@ -10,6 +10,14 @@ const DESK_THROW_RANGE := 1
 const DASH_REACH := 2
 const DASH_COOLDOWN := 3
 
+# ---- Coming onto the board ----
+
+func placed() -> void:
+	if arena.player:
+		push_error("The stage has more than one player tile.")
+	arena.player = self
+
+
 # ---- Abilities ----
 
 var desk_throw := Ability.new("Throw desk", "Pick a desk next to you, then a cell next to you where it lands. Use it to open a way or to close one. On a rival the desk breaks: the rival is stunned for 2 turns and loses 1 motivation.", 0, [1, 1], [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk)

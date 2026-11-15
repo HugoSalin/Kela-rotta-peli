@@ -28,6 +28,12 @@ texture_region_size = Vector2i(80, 70)
 9:1/0/custom_data_0 = "elevator"
 10:1/0 = 0
 10:1/0/custom_data_0 = "goal"
+11:1/0 = 0
+11:1/0/custom_data_0 = "application"
+12:1/0 = 0
+12:1/0/custom_data_0 = "cv"
+13:1/0 = 0
+13:1/0/custom_data_0 = "tax_card"
 
 [resource]
 tile_shape = 3

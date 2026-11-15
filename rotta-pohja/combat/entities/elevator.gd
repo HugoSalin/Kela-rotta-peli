@@ -18,7 +18,7 @@ func take_turn() -> void:
 	turns_until_enemy = max(0, turns_until_enemy - 1)
 	if turns_until_enemy == 0 and arena.is_free(cell):
 		turns_until_enemy = EVERY
-		arena.add_staggered(Enemy.new(cell))
+		arena.place(Enemy.new(cell))
 
 
 func card() -> Card:

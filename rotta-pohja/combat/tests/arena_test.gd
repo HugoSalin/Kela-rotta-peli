@@ -36,6 +36,15 @@ func setup(player: Vector2i, enemy_cells: Array, paint := func(_painted: Arena):
 	arena.view.finish()
 
 
+# For setup(): paints these kinds of piece on the cells, in place of the tiles of arena.tscn.
+func pieces(kinds: Dictionary[Vector2i, String]) -> Callable:
+	return func(painted: Arena):
+		var tiles: TileMapLayer = painted.get_node("Entities")
+		tiles.clear()
+		for cell in kinds:
+			tiles.set_cell(cell, 0, Kinds.tile(kinds[cell]))
+
+
 func desks() -> Array:
 	return arena.entities.filter(func(entity): return entity is Desk).map(func(entity): return entity.cell)
 
@@ -103,6 +112,7 @@ func run() -> void:
 	test_grid()
 	test_layout()
 	test_room()
+	test_kinds()
 	test_cursor()
 	test_turns()
 	test_queue_number()
@@ -148,6 +158,21 @@ func test_layout() -> void:
 	check("which is centered and no taller than the game's window", [arena.position + shown.get_center(), shown.size.y <= ProjectSettings.get_setting("display/window/size/viewport_height")], [root.get_visible_rect().size / 2, true])
 
 
+func test_kinds() -> void:
+	var kinds := Kinds.ALL.keys()
+	var painted: Dictionary[Vector2i, String] = {}
+	for index in kinds.size():
+		painted[Vector2i(index % 9, index / 9)] = kinds[index]
+	setup(Vector2i(0, 0), [], pieces(painted))
+	var wrong := 0
+	for cell in painted:
+		var kind: Dictionary = Kinds.ALL[painted[cell]]
+		if not arena.entities.any(func(entity): return entity.cell == cell and entity.get_script() == kind.type):
+			wrong += 1
+	check("a painted tile of each kind puts that piece on its cell", [arena.entities.size(), wrong], [kinds.size(), 0])
+	check("a kind's properties are set on its piece", arena.entities.filter(func(entity): return entity is Document).map(func(entity): return entity.title()), ["application", "CV", "tax card"])
+
+
 # A room with a hole in the middle and a cell added outside the 9 by 7 of arena.tscn.
 func test_room() -> void:
 	setup(Vector2i(4, 2), [Vector2i(4, 4)], func(painted: Arena):
@@ -155,7 +180,7 @@ func test_room() -> void:
 		background.erase_cell(Vector2i(4, 3))
 		background.set_cell(Vector2i(9, 0), 0, Kinds.FLOOR_TILE))
 	check("the room's cells are the painted ones", [arena.grid.cells.size(), arena.grid.has(Vector2i(4, 3)), arena.grid.has(Vector2i(9, 0))], [63, false, true])
-	check("the painted floor is shown", arena.grid.visible, true)
+	check("the painted floor is shown, the painted pieces are not: the view draws them", [arena.grid.visible, arena.entity_tiles.visible], [true, false])
 	check("the labels are as wide as the room", [arena.view.status_label.size.x, arena.view.prompt_label.size.x], [arena.view.room_bounds().size.x, arena.view.room_bounds().size.x])
 	check("a hole can't be walked on", arena.selection.action_cells().has(Vector2i(4, 3)), false)
 	check("a hole blocks sight, as a wall does", [arena.has_line_of_sight(Vector2i(4, 2), Vector2i(4, 4)), arena.has_line_of_sight(Vector2i(3, 2), Vector2i(3, 4))], [false, true])
@@ -385,7 +410,6 @@ func test_shove() -> void:
 	check("three rivals in a row: the third is not affected", arena.enemies().map(func(r): return [r.cell, r.health, r.stunned_turns]), [[Vector2i(4, 4), 2, 1], [Vector2i(4, 3), 2, 1], [Vector2i(4, 2), 3, 98]])
 
 	setup(Vector2i(4, 3), [Vector2i(4, 2), FAR])
-	arena.enemy_starts.assign([Vector2i(4, 2), FAR])
 	set_desks([Vector2i(4, 1)])
 	arena.enemies()[1].stunned_turns = 99
 	press("WWE")
@@ -583,11 +607,9 @@ func test_signals() -> void:
 
 
 func test_several_enemies() -> void:
-	arena.free()
-	arena = load("res://combat/arena.tscn").instantiate()
-	arena.enemy_starts.assign([FAR, Vector2i(8, 0), Vector2i(8, 3), Vector2i(0, 6)])
-	root.add_child(arena)
-	check("a stage's rivals start their dash countdowns a turn apart", arena.enemies().map(func(enemy): return enemy.turns_until_dash), [3, 4, 5, 3])
+	setup(Vector2i(0, 3), [], pieces({Vector2i(0, 3): "player", FAR: "enemy", Vector2i(8, 0): "enemy", Vector2i(8, 3): "enemy", Vector2i(0, 6): "enemy"}))
+	check("a stage's rivals are in the order of their cells, by column and then row", arena.enemies().map(func(enemy): return enemy.cell), [Vector2i(0, 6), Vector2i(8, 0), Vector2i(8, 3), FAR])
+	check("and start their dash countdowns a turn apart", arena.enemies().map(func(enemy): return enemy.turns_until_dash), [3, 4, 5, 3])
 	test_intern()
 	test_elevator()
 	test_chair()
@@ -654,14 +676,9 @@ func test_several_enemies() -> void:
 
 
 func test_intern() -> void:
-	arena.free()
-	arena = load("res://combat/arena.tscn").instantiate()
-	arena.player_start = Vector2i(4, 6)
-	arena.enemy_starts.assign([FAR])
-	arena.intern_starts.assign([Vector2i(4, 1)])
-	root.add_child(arena)
-	var intern := arena.enemies()[1]
-	arena.enemies()[0].stunned_turns = 99
+	setup(Vector2i(4, 6), [], pieces({Vector2i(4, 6): "player", FAR: "enemy", Vector2i(4, 1): "intern"}))
+	var intern := arena.enemies()[0]
+	arena.enemies()[1].stunned_turns = 99
 	check("a stage's intern dashes on the first turn and shows its line from the start", [intern is Intern, intern.turns_until_dash, intern.dash_cells()], [true, 1, [Vector2i(4, 2), Vector2i(4, 3)]])
 	press("E")
 	check("an intern dashes every turn, with the next line fixed after each dash", [intern.cell, intern.turns_until_dash, intern.dash_cells()], [Vector2i(4, 3), 1, [Vector2i(4, 4), Vector2i(4, 5)]])
@@ -742,8 +759,8 @@ func test_keycard() -> void:
 	arena.goal_name = "server"
 	arena.add(Keycard.new(Vector2i(4, 4)))
 	check("a key card locks the goal", arena.objective_text(), "Get the key card, then reach the server.")
-	for number in 3:
-		arena.add(Document.new(Vector2i(number, 0), number))
+	for kind in ["application", "cv", "tax_card"]:
+		arena.add(Kinds.create(kind, Vector2i(arena.entities.size(), 0)))
 	check("documents lock it too, each by its name", arena.objective_text(), "Get the key card, the application, the CV and the tax card, then reach the server.")
 	replace(Document, [])
 	press("WWE")

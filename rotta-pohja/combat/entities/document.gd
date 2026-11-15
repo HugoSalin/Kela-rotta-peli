@@ -1,15 +1,12 @@
 class_name Document
 extends Key
 
-# A paper the player has to collect; a stage has several. A stage's documents are named in
-# the order it lists them.
-
-const NAMES: Array[String] = ["application", "CV", "tax card"]
+# A paper the player has to collect; a stage has several, each with its own name.
 
 
-func _init(start_cell: Vector2i, number: int) -> void:
+func _init(start_cell: Vector2i) -> void:
 	super(start_cell)
-	called = NAMES[number % NAMES.size()]
+	called = "document"
 	body_color = Color(0.93, 0.93, 0.88)
 
 

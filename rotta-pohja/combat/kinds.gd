@@ -1,6 +1,7 @@
 class_name Kinds
 
-# Every kind of piece a stage can paint. A tile of the stage tile set carries a kind's
+# Every kind of piece a stage can paint: its type, and the properties that set it apart
+# from others of that type. A tile of the stage tile set carries a kind's
 # name as its custom data `kind`. Add a kind at the end: a painted stage refers to a tile
 # by its place in this list.
 
@@ -16,6 +17,9 @@ static var ALL: Dictionary[String, Dictionary] = {
 	"wet_floor": {type = WetFloor},
 	"elevator": {type = Elevator},
 	"goal": {type = Goal},
+	"application": {type = Document, properties = {called = "application"}},
+	"cv": {type = Document, properties = {called = "CV", body_color = Color(0.7, 0.85, 0.95)}},
+	"tax_card": {type = Document, properties = {called = "tax card", body_color = Color(0.75, 0.93, 0.7)}},
 }
 const FLOOR_TILE := Vector2i(0, 0)
 
