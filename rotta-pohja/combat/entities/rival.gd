@@ -41,19 +41,20 @@ func take_turn() -> void:
 		hunt()
 
 
-# It moves over the free cells of its line; a rival on the line loses motivation.
+# A rival on the line loses motivation. It moves over the cells of its line that are free,
+# also those a rival just gave up.
 func dash() -> void:
 	turns_until_dash = DASH_EVERY
 	var line := dash_cells()
 	dash_side = HexGrid.NO_SIDE
 	for step in line:
-		var rival := arena.rival_at(step)
 		if step == arena.player.cell:
 			grab()
 			return
-		elif rival:
+		var rival := arena.rival_at(step)
+		if rival:
 			rival.demotivate()
-		else:
+		if arena.is_free(step):
 			arena.move(self, step)
 	if is_next_to_player():
 		grab()
@@ -91,11 +92,13 @@ func dash_cells() -> Array[Vector2i]:
 	return result
 
 
-# Where its dash would end now: the last cell of the line without a rival, or its own cell.
+# Where its dash would end now: the last cell of the line without a rival or with one that
+# the dash makes give up, or its own cell.
 func dash_end() -> Vector2i:
 	var end := cell
 	for step in dash_cells():
-		if arena.rival_at(step) == null:
+		var rival := arena.rival_at(step)
+		if rival == null or rival.motivation == 1:
 			end = step
 	return end
 

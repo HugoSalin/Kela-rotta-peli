@@ -535,6 +535,15 @@ func test_several_rivals() -> void:
 	press("E")
 	check("a dash passes through a rival, which here gives up and takes no turn", [arena.rivals().size(), arena.rivals()[0].cell], [1, Vector2i(4, 2)])
 
+	setup(Vector2i(8, 6), [Vector2i(4, 0), Vector2i(4, 2)])
+	arena.rivals()[1].stunned_turns = 99
+	arena.rivals()[1].motivation = 1
+	arena.rivals()[0].turns_until_dash = 1
+	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
+	check("the preview ends on the cell of a rival the dash makes give up", arena.rivals()[0].dash_end(), Vector2i(4, 2))
+	press("E")
+	check("and the dash ends there", [arena.rivals().size(), arena.rivals()[0].cell], [1, Vector2i(4, 2)])
+
 	setup(Vector2i(4, 5), [Vector2i(4, 2)])
 	arena.rivals()[0].turns_until_dash = 1
 	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_BOTTOM_SIDE
