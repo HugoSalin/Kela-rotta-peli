@@ -16,6 +16,8 @@ var obstacle := false
 var blocks_sight := false
 var throwable := false
 var shovable := false
+# The goal can't be reached while it is on the board.
+var locks_goal := false
 
 # ---- How it is shown ----
 

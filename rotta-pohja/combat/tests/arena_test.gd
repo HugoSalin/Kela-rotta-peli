@@ -519,6 +519,7 @@ func test_several_rivals() -> void:
 	test_intern()
 	test_elevator()
 	test_chair()
+	test_keycard()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -648,6 +649,23 @@ func test_chair() -> void:
 	check("without a rival it rolls to the edge", chair.cell, Vector2i(4, 0))
 
 
+func test_keycard() -> void:
+	setup(Vector2i(4, 3), [FAR])
+	arena.rivals()[0].stunned_turns = 99
+	arena.goal_cell = Vector2i(4, 2)
+	arena.goal_name = "server"
+	arena.add(Keycard.new(Vector2i(4, 4)))
+	check("a key card locks the goal", arena.objective_text(), "Get the key card, then reach the server.")
+	press("WWE")
+	check("reaching a locked goal does not win", [arena.player.cell, arena.finished], [Vector2i(4, 2), false])
+	press("SSE")
+	press("SSE")
+	check("ending an action on the card picks it up", [arena.is_goal_locked(), arena.objective_text()], [false, "Reach the server."])
+	press("WWE")
+	press("WWE")
+	check("then the goal wins", results, [true])
+
+
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.
 # The throws are left out: with them the search takes too long, and a stage that can be won
 # without them can be won.
@@ -657,6 +675,8 @@ func test_stages_can_be_won() -> void:
 			arena.free()
 		arena = scene.instantiate()
 		root.add_child(arena)
+		# The search shows nothing, and without the view a turn is much faster.
+		arena.view.free()
 		var seen := {state_key(snapshot()): true}
 		var frontier := [snapshot()]
 		var can_win := false

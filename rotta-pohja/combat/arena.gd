@@ -25,6 +25,7 @@ signal combat_finished(won: bool)
 @export var pillar_cells: Array[Vector2i] = []
 @export var elevator_cells: Array[Vector2i] = []
 @export var chair_cells: Array[Vector2i] = []
+@export var keycard_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
 @export var goal_name := ""
@@ -57,7 +58,14 @@ var rehearsing := false
 var forecast: Array[Vector2i] = []
 # The cells where a dash takes the form before the player's next action. After the
 # player's action these are the dashes of this round; after the round, those of the next.
-var danger: Array[Vector2i] = []
+# Worked out when first asked for after the board changed.
+var danger: Array[Vector2i]:
+	get:
+		if danger_is_stale:
+			danger_is_stale = false
+			danger = danger_cells()
+		return danger
+var danger_is_stale := true
 
 
 func _ready() -> void:
@@ -69,6 +77,8 @@ func _ready() -> void:
 		add(Elevator.new(cell))
 	for cell in chair_cells:
 		add(Chair.new(cell))
+	for cell in keycard_cells:
+		add(Keycard.new(cell))
 	for cell in rival_starts:
 		add_staggered(Rival.new(cell))
 	for cell in intern_starts:
@@ -78,7 +88,6 @@ func _ready() -> void:
 	# A rival that dashes on the first turn shows its line from the start.
 	for rival in rivals():
 		rival.aim()
-	danger = danger_cells()
 	turns_left = queue_turns
 	view.animation_finished.connect(announce)
 	get_viewport().size_changed.connect(center_in_viewport)
@@ -167,6 +176,10 @@ func is_throwable(cell: Vector2i) -> bool:
 	return entity != null and entity.throwable
 
 
+func is_goal_locked() -> bool:
+	return entities.any(func(entity): return entity.locks_goal)
+
+
 func is_shovable(cell: Vector2i) -> bool:
 	var entity := entity_at(cell)
 	return entity != null and entity.shovable
@@ -195,9 +208,9 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 	turn_started.emit()
 	used.use.call(picked)
 	start_round()
-	danger = danger_cells()
+	danger_is_stale = true
 	report(entity_acted, [player])
-	if player.cell == goal_cell:
+	if player.cell == goal_cell and not is_goal_locked():
 		end(true, "You reached the %s." % goal_name)
 	elif defeat_rivals and rivals().is_empty():
 		end(true, "Every rival gave up.")
@@ -209,7 +222,7 @@ func take_turn(used: Ability, picked: Array[Vector2i]) -> void:
 		if turns_left == 0:
 			end(true, "Your number was called.")
 	player.cool_down(used)
-	danger = danger_cells()
+	danger_is_stale = true
 	turn_ended.emit()
 
 
@@ -283,7 +296,7 @@ func announce() -> void:
 func objective_text() -> String:
 	var parts: Array[String] = []
 	if grid.has(goal_cell):
-		parts.append("Reach the %s." % goal_name)
+		parts.append(("Get the key card, then reach the %s." if is_goal_locked() else "Reach the %s.") % goal_name)
 	if turns_left > 0:
 		parts.append("Your number is called in %d %s." % [turns_left, "turn" if turns_left == 1 else "turns"])
 	if defeat_rivals:
