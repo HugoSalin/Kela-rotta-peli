@@ -27,6 +27,7 @@ signal combat_finished(won: bool)
 @export var elevator_cells: Array[Vector2i] = []
 @export var chair_cells: Array[Vector2i] = []
 @export var keycard_cells: Array[Vector2i] = []
+@export var document_cells: Array[Vector2i] = []
 @export var wet_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
@@ -83,6 +84,8 @@ func _ready() -> void:
 		add(Chair.new(cell))
 	for cell in keycard_cells:
 		add(Keycard.new(cell))
+	for number in document_cells.size():
+		add(Document.new(document_cells[number], number))
 	for cell in wet_cells:
 		add(WetFloor.new(cell))
 	for cell in rival_starts:
@@ -308,13 +311,21 @@ func announce() -> void:
 
 func objective_text() -> String:
 	var parts: Array[String] = []
+	var locks := entities.filter(func(entity): return entity.locks_goal).map(func(entity): return "the " + entity.title())
 	if grid.has(goal_cell):
-		parts.append(("Get the key card, then reach the %s." if is_goal_locked() else "Reach the %s.") % goal_name)
+		parts.append("Reach the %s." % goal_name if locks.is_empty() else "Get %s, then reach the %s." % [listed(locks), goal_name])
 	if turns_left > 0:
 		parts.append("Your number is called in %d %s." % [turns_left, "turn" if turns_left == 1 else "turns"])
 	if defeat_rivals:
 		parts.append("Make every rival give up." if parts.is_empty() else "Or make every rival give up.")
 	return " ".join(parts)
+
+
+# The items as a list in a sentence: "a, b and c".
+static func listed(items: Array) -> String:
+	if items.size() == 1:
+		return items[0]
+	return ", ".join(items.slice(0, -1)) + " and " + items[-1]
 
 
 # ---- Paths ----

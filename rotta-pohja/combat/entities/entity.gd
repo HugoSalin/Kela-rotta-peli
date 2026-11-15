@@ -58,6 +58,13 @@ func warning_cells() -> Array[Vector2i]:
 	return []
 
 
+# ---- In the objective ----
+
+# What the objective calls it, for a kind the objective names.
+func title() -> String:
+	return ""
+
+
 # ---- Its card ----
 
 # What the player is told when first meeting its kind; null for a kind that needs no words.

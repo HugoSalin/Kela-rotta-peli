@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://combat/arena.tscn" id="1_arena"]
+
+[node name="Arena" instance=ExtResource("1_arena")]
+manager_starts = Array[Vector2i]([Vector2i(8, 6)])
+elevator_cells = Array[Vector2i]([Vector2i(8, 0)])
+chair_cells = Array[Vector2i]([Vector2i(1, 2), Vector2i(3, 4), Vector2i(5, 2), Vector2i(7, 4)])
+document_cells = Array[Vector2i]([Vector2i(2, 1), Vector2i(4, 5), Vector2i(6, 1)])
+wet_cells = Array[Vector2i]([Vector2i(4, 2), Vector2i(4, 3), Vector2i(4, 4)])
+desk_cells = Array[Vector2i]([Vector2i(2, 3), Vector2i(6, 3), Vector2i(2, 5), Vector2i(6, 5)])
+pillar_cells = Array[Vector2i]([Vector2i(3, 1), Vector2i(5, 4)])
+goal_cell = Vector2i(8, 3)
+goal_name = "contract"

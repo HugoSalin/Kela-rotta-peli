@@ -723,6 +723,10 @@ func test_keycard() -> void:
 	arena.goal_name = "server"
 	arena.add(Keycard.new(Vector2i(4, 4)))
 	check("a key card locks the goal", arena.objective_text(), "Get the key card, then reach the server.")
+	for number in 3:
+		arena.add(Document.new(Vector2i(number, 0), number))
+	check("documents lock it too, each by its name", arena.objective_text(), "Get the key card, the application, the CV and the tax card, then reach the server.")
+	replace(Document, [])
 	press("WWE")
 	check("reaching a locked goal does not win", [arena.player.cell, arena.finished], [Vector2i(4, 2), false])
 	press("SSE")
@@ -803,26 +807,49 @@ func test_stages_can_be_won() -> void:
 		root.add_child(arena)
 		# The search shows nothing, and without the view a turn is much faster.
 		arena.view.free()
+		# States are tried nearest to a win first: those to try, listed by how far they are.
 		var seen := {state_key(snapshot()): true}
-		var frontier := [snapshot()]
+		var to_try: Array[Array] = [[snapshot()]]
 		var can_win := false
-		while not frontier.is_empty() and not can_win:
-			var next := []
-			for state in frontier:
+		while not can_win:
+			var nearest := to_try.find_custom(func(states): return not states.is_empty())
+			if nearest == -1:
+				break
+			var state: Dictionary = to_try[nearest].pop_back()
+			restore(state)
+			for cell in arena.selection.action_cells():
+				if arena.is_throwable(cell):
+					continue
 				restore(state)
-				for cell in arena.selection.action_cells():
-					if arena.is_throwable(cell):
-						continue
-					restore(state)
-					arena.selection.pick(cell)
-					var after := snapshot()
-					if arena.won:
-						can_win = true
-					elif not arena.finished and not seen.has(state_key(after)):
-						seen[state_key(after)] = true
-						next.append(after)
-			frontier = next
+				arena.selection.pick(cell)
+				var after := snapshot()
+				if arena.won:
+					can_win = true
+				elif not arena.finished and not seen.has(state_key(after)):
+					seen[state_key(after)] = true
+					var far := remaining()
+					while to_try.size() <= far:
+						to_try.append([])
+					to_try[far].append(after)
 		check("%s can be won" % scene.resource_path.get_file(), can_win, true)
+
+
+# Roughly how many turns the board is from a win: the way to what locks the goal and on to
+# the goal, the turns still to wait, or the motivation the rivals have left.
+func remaining() -> int:
+	var result: int = max(arena.turns_left, 0)
+	if arena.grid.has(arena.goal_cell):
+		var at := arena.player.cell
+		var locks := arena.entities.filter(func(entity): return entity.locks_goal)
+		while not locks.is_empty():
+			locks.sort_custom(func(a, b): return arena.grid.distance(at, a.cell) < arena.grid.distance(at, b.cell))
+			result += arena.grid.distance(at, locks[0].cell)
+			at = locks.pop_front().cell
+		result += arena.grid.distance(at, arena.goal_cell)
+	elif result == 0:
+		for rival in arena.rivals():
+			result += rival.motivation
+	return result
 
 
 # The arena's own snapshot, with what else a turn changes.

@@ -4,6 +4,8 @@ extends Entity
 # A key card: the goal stays locked until the player has picked it up by ending an action
 # on its cell.
 
+var called := "key card"
+
 
 func _init(start_cell: Vector2i) -> void:
 	super(start_cell)
@@ -15,6 +17,10 @@ func _init(start_cell: Vector2i) -> void:
 func take_turn() -> void:
 	if arena.player.cell == cell:
 		arena.remove(self)
+
+
+func title() -> String:
+	return called
 
 
 func card() -> Card:
