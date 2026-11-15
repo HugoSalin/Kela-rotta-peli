@@ -113,9 +113,9 @@ func test_grid() -> void:
 	check("cells whose lattice point is wrong", wrong_points, 0)
 	check("neighbors not at distance 1", wrong_distances, 0)
 	check("distance corner to corner", arena.grid.distance(Vector2i(0, 0), Vector2i(8, 6)), 10)
-	check("reachable cells in the middle", arena.selection.action_cells().size(), 6)
+	check("cells to pick in the middle: the neighbors and the player's own", arena.selection.action_cells().size(), 7)
 	setup(Vector2i(0, 0), 1, [])
-	check("reachable cells in a corner", arena.selection.action_cells().size(), 2)
+	check("cells to pick in a corner", arena.selection.action_cells().size(), 3)
 
 
 func test_cursor() -> void:
@@ -149,10 +149,11 @@ func test_cursor() -> void:
 
 
 func test_turns() -> void:
-	for keys in ["E", "DE"]:
-		setup(Vector2i(4, 3), 1, [FAR])
-		press(keys)
-		check("confirm on own cell or seam: no move, no turn", [arena.player.cell, arena.rivals()[0].cell], [Vector2i(4, 3), FAR])
+	setup(Vector2i(4, 3), 1, [FAR])
+	press("DE")
+	check("confirm on a seam: no move, no turn", [arena.player.cell, arena.rivals()[0].cell], [Vector2i(4, 3), FAR])
+	press("AE")
+	check("confirm on own cell: no move, the turn passes", [arena.player.cell, arena.grid.distance(arena.rivals()[0].cell, FAR), arena.rivals()[0].turns_until_dash], [Vector2i(4, 3), 1, 2])
 	setup(Vector2i(4, 3), 3, [FAR])
 	press("DDE")
 	check("confirm on a cell out of reach", arena.player.cell, Vector2i(4, 3))

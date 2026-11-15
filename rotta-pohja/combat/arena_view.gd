@@ -172,7 +172,7 @@ func _draw() -> void:
 # The floor, then the entities that fill a cell, then the marks on top of both.
 # What the player can pick is green, the rest of the ability's range a darker green:
 # the whole cell on plain floor, a smaller hex inside an obstacle or a dangerous cell
-# (not under the player, whose own cell can't be picked).
+# (not under the player, whose circle would cover most of it).
 func draw_cells() -> void:
 	var actions := selection.action_cells()
 	var in_range := selection.range_cells()

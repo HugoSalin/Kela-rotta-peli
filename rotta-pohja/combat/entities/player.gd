@@ -30,16 +30,17 @@ func color() -> Color:
 
 # ---- Move / Shove ----
 
-# A desk next to the player is a pick too while the desk throw is ready: it starts the throw.
+# The player's own cell is a pick: it waits, and the turn passes. A desk next to the player
+# is a pick too while the desk throw is ready: it starts the throw.
 func can_move_or_shove(_picked: Array[Vector2i], target: Vector2i) -> bool:
-	return arena.is_free(target) or arena.rival_at(target) != null or (arena.is_throwable(target) and desk_throw.turns_until_ready == 0)
+	return target == cell or arena.is_free(target) or arena.rival_at(target) != null or (arena.is_throwable(target) and desk_throw.turns_until_ready == 0)
 
 
 func move_or_shove(picked: Array[Vector2i]) -> void:
 	var rival := arena.rival_at(picked[0])
 	if rival:
 		shove(rival)
-	else:
+	elif picked[0] != cell:
 		arena.move(self, picked[0])
 
 
