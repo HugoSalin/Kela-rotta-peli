@@ -8,11 +8,15 @@ const WALL_STUN := 2
 const SHOVE_STUN := 1
 const PAPER_RANGE := 3
 const DESK_THROW_RANGE := 2
+# The dash lands two cells away; dash_over() relies on it.
+const DASH_REACH := 2
+const DASH_COOLDOWN := 3
 
 var abilities: Array[Ability] = [
 	Ability.new("Move / Shove", 0, [1], [""], can_move_or_shove, move_or_shove),
 	Ability.new("Throw paperwork", 0, [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
 	Ability.new("Throw desk", 0, [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
+	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], ["Pick where you land."], can_dash, dash),
 ]
 var desk_throw := abilities[2]
 
@@ -106,4 +110,30 @@ func throw_desk(picked: Array[Vector2i]) -> void:
 	if rival:
 		arena.remove(desk)
 		rival.stun(WALL_STUN)
+		rival.demotivate()
+
+
+# ---- Dash ----
+
+# The cell the dash crosses on its way to `target`, two cells away in a straight line;
+# NO_CELL if `target` is no such cell.
+func dash_over(target: Vector2i) -> Vector2i:
+	for side in HexGrid.SIDES:
+		var between := arena.grid.step(cell, side)
+		if arena.grid.step(between, side) == target:
+			return between
+	return HexGrid.NO_CELL
+
+
+# It lands on a free cell and can't cross an obstacle.
+func can_dash(_picked: Array[Vector2i], target: Vector2i) -> bool:
+	var between := dash_over(target)
+	return arena.grid.has(between) and not arena.is_obstacle(between) and arena.is_free(target)
+
+
+# A rival it goes through loses motivation.
+func dash(picked: Array[Vector2i]) -> void:
+	var rival := arena.rival_at(dash_over(picked[0]))
+	arena.move(self, picked[0])
+	if rival:
 		rival.demotivate()

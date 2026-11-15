@@ -3,7 +3,7 @@ extends SceneTree
 # Tests the combat arena by pressing keys. Run from the repository root; exits with 1 on a failure:
 #   timeout 30 godot --headless --path rotta-pohja --script res://combat/tests/arena_test.gd
 
-const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept", "1": "combat_ability_1", "2": "combat_ability_2", "3": "combat_ability_3"}
+const KEYS := {"W": "combat_up", "S": "combat_down", "A": "combat_left", "D": "combat_right", "E": "ui_accept", "1": "combat_ability_1", "2": "combat_ability_2", "3": "combat_ability_3", "4": "combat_ability_4"}
 const FAR := Vector2i(8, 6)
 const STAGES := preload("res://combat/loop_prototype.gd").STAGES
 
@@ -91,6 +91,7 @@ func run() -> void:
 	test_danger()
 	test_throw_paper()
 	test_throw_desk()
+	test_dash_ability()
 	test_signals()
 	test_several_rivals()
 	test_stages_can_be_won()
@@ -390,13 +391,13 @@ func test_throw_paper() -> void:
 	arena.player.abilities[1].cooldown = 3
 	press("2")
 	check("key 2 chooses the throw: range 3, only rivals in range", [arena.selection.ability.title, arena.selection.reach, arena.selection.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
-	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk\nPick a rival.")
+	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk   [4] Dash\nPick a rival.")
 	press("1")
 	check("key 1 goes back", [arena.selection.ability.title, arena.selection.reach], ["Move / Shove", 1])
 	press("2WWWWWWE")
 	check("a throw costs motivation, takes the turn and goes back to moving", [arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns, arena.selection.ability.title, arena.player.abilities[1].turns_until_ready], [2, 98, "Move / Shove", 3])
 	check("the cursor returns from outside the range", arena.selection.point, arena.selection.cell_to_point(Vector2i(4, 5)))
-	check("the ability line shows the cooldown", arena.view.ability_label.text, "> [1] Move / Shove   [2] Throw paperwork (3)   [3] Throw desk\n")
+	check("the ability line shows the cooldown", arena.view.ability_label.text, "> [1] Move / Shove   [2] Throw paperwork (3)   [3] Throw desk   [4] Dash\n")
 	press("2")
 	check("it can't be chosen while cooling down", arena.selection.ability.title, "Move / Shove")
 	var waits: Array[int] = []
@@ -476,6 +477,25 @@ func test_throw_desk() -> void:
 	set_pillars([Vector2i(4, 2)])
 	press("WWE")
 	check("a shove into a pillar is a shove into a wall", [arena.rivals()[0].cell, arena.rivals()[0].motivation, arena.rivals()[0].stunned_turns], [Vector2i(4, 3), 2, 1])
+
+
+func test_dash_ability() -> void:
+	setup(Vector2i(4, 3), 1, [Vector2i(4, 2), Vector2i(6, 4)])
+	arena.rivals()[0].stunned_turns = 99
+	arena.rivals()[1].stunned_turns = 99
+	press("4")
+	var landings := arena.selection.action_cells()
+	check("key 4 chooses the dash: two cells away in the six directions, not onto a rival", [arena.selection.ability.title, arena.selection.reach, landings.size(), Vector2i(4, 1) in landings, Vector2i(6, 4) in landings, Vector2i(5, 2) in landings], ["Dash", 2, 5, true, false, false])
+	set_desks([Vector2i(2, 2)])
+	set_pillars([Vector2i(5, 2)])
+	check("not onto a desk, not across a pillar", [Vector2i(2, 2) in arena.selection.action_cells(), Vector2i(6, 2) in arena.selection.action_cells()], [false, false])
+	set_desks([Vector2i(3, 3)])
+	check("not across a desk", Vector2i(2, 4) in arena.selection.action_cells(), false)
+	press("WWWWE")
+	check("a dash through a rival lands behind it, costs it motivation and starts the cooldown", [arena.player.cell, arena.rivals()[0].motivation, arena.rivals()[0].cell, arena.player.abilities[3].turns_until_ready, arena.selection.ability.title], [Vector2i(4, 1), 2, Vector2i(4, 2), 3, "Move / Shove"])
+	setup(Vector2i(0, 0), 1, [])
+	press("4")
+	check("the corner has only the landings inside the arena", arena.selection.action_cells(), [Vector2i(0, 2), Vector2i(2, 1)])
 
 
 func test_signals() -> void:
