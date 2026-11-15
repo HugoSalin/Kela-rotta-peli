@@ -53,6 +53,7 @@ func take_turn() -> void:
 
 # A rival on the line loses motivation. It moves over the cells of its line without a rival,
 # also those a rival just gave up, and takes the form on the line and next to where it ends.
+# A slide on wet floor ends the dash where the slide ends.
 func dash() -> void:
 	turns_until_dash = dash_every
 	var line := dash_cells()
@@ -64,6 +65,8 @@ func dash() -> void:
 			rival.demotivate()
 		if arena.rival_at(step) == null:
 			arena.move(self, step)
+		if cell != step and arena.rival_at(step) == null:
+			break
 	arena.threaten(line + arena.grid.neighbors(cell).filter(func(near): return near not in line and near != start and not arena.is_obstacle(near)))
 
 

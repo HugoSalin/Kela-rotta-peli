@@ -51,15 +51,15 @@ func side_between(from: Vector2i, to: Vector2i) -> int:
 	return NO_SIDE
 
 
-# Is `to` reached from `from` by steps on one side only?
-func is_straight(from: Vector2i, to: Vector2i) -> bool:
+# The side on which steps from `from` lead straight to `to`, or NO_SIDE if none does.
+func straight_side(from: Vector2i, to: Vector2i) -> int:
 	for side in SIDES:
 		var cell := from
 		for index in distance(from, to):
 			cell = step(cell, side)
-		if cell == to:
-			return true
-	return false
+		if cell == to and cell != from:
+			return side
+	return NO_SIDE
 
 
 # ---- Distances and lines ----

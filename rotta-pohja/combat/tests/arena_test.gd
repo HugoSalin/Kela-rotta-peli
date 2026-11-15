@@ -520,6 +520,7 @@ func test_several_rivals() -> void:
 	test_elevator()
 	test_chair()
 	test_keycard()
+	test_wet_floor()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -664,6 +665,37 @@ func test_keycard() -> void:
 	press("WWE")
 	press("WWE")
 	check("then the goal wins", results, [true])
+
+
+func test_wet_floor() -> void:
+	setup(Vector2i(4, 6), [Vector2i(0, 0)])
+	arena.rivals()[0].stunned_turns = 99
+	for cell in [Vector2i(4, 5), Vector2i(4, 4), Vector2i(4, 3)]:
+		arena.add(WetFloor.new(cell))
+	press("WWE")
+	check("stepping onto wet floor slides to the first dry cell", arena.player.cell, Vector2i(4, 2))
+	set_desks([Vector2i(4, 4)])
+	press("SSE")
+	check("or as far as there is room", arena.player.cell, Vector2i(4, 3))
+	set_desks([])
+	arena.player.cell = Vector2i(4, 6)
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 6))
+	arena.rivals()[0].cell = Vector2i(4, 5)
+	press("WWE")
+	check("a rival shoved onto wet floor slides too", arena.rivals()[0].cell, Vector2i(4, 2))
+	arena.player.cell = Vector2i(0, 0)
+	arena.rivals()[0].cell = Vector2i(4, 6)
+	arena.rivals()[0].stunned_turns = 0
+	arena.rivals()[0].turns_until_dash = 1
+	arena.rivals()[0].dash_side = TileSet.CELL_NEIGHBOR_TOP_SIDE
+	var preview := arena.danger_cells()
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(0, 0))
+	press("E")
+	check("a dash onto wet floor slides on, and the preview knew", [arena.rivals()[0].cell, Vector2i(4, 1) in preview], [Vector2i(4, 2), true])
+	setup(Vector2i(4, 6), [])
+	arena.add(WetFloor.new(Vector2i(4, 4)))
+	press("4WWWWE")
+	check("the player's dash onto wet floor slides on", arena.player.cell, Vector2i(4, 3))
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.

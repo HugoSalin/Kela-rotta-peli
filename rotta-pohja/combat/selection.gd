@@ -95,7 +95,7 @@ func range_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in grid.cells:
 		var distance := grid.distance(arena.player.cell, cell)
-		var on_line := not ability.straight or grid.is_straight(arena.player.cell, cell)
+		var on_line := not ability.straight or grid.straight_side(arena.player.cell, cell) != HexGrid.NO_SIDE
 		if distance >= min_reach() and distance <= reach() and on_line and arena.has_line_of_sight(arena.player.cell, cell):
 			result.append(cell)
 	return result

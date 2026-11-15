@@ -26,6 +26,7 @@ signal combat_finished(won: bool)
 @export var elevator_cells: Array[Vector2i] = []
 @export var chair_cells: Array[Vector2i] = []
 @export var keycard_cells: Array[Vector2i] = []
+@export var wet_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
 @export var goal_name := ""
@@ -79,6 +80,8 @@ func _ready() -> void:
 		add(Chair.new(cell))
 	for cell in keycard_cells:
 		add(Keycard.new(cell))
+	for cell in wet_cells:
+		add(WetFloor.new(cell))
 	for cell in rival_starts:
 		add_staggered(Rival.new(cell))
 	for cell in intern_starts:
@@ -115,11 +118,16 @@ func add(entity: Entity) -> void:
 	report(entity_added, [entity])
 
 
+# The player or a rival that moves straight onto a wet cell slides on in that direction
+# until the cell it is on is dry or the next one is taken.
 func move(entity: Entity, to: Vector2i) -> void:
 	var from := entity.cell
 	entity.cell = to
 	obstacles_changed(entity)
 	report(entity_moved, [entity, from, to])
+	var side := grid.straight_side(from, to)
+	if entity.solid and not entity.obstacle and is_wet(to) and side != HexGrid.NO_SIDE and is_free(grid.step(to, side)):
+		move(entity, grid.step(to, side))
 
 
 func block(entity: Entity, toward: Vector2i) -> void:
@@ -174,6 +182,10 @@ func is_obstacle(cell: Vector2i) -> bool:
 func is_throwable(cell: Vector2i) -> bool:
 	var entity := entity_at(cell)
 	return entity != null and entity.throwable
+
+
+func is_wet(cell: Vector2i) -> bool:
+	return entities.any(func(entity): return entity.slippery and entity.cell == cell)
 
 
 func is_goal_locked() -> bool:
