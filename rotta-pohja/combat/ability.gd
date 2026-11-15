@@ -16,11 +16,13 @@ var prompts: Array[String]
 var straight: bool
 # (picked: Array[Vector2i], cell: Vector2i) -> bool: may `cell` be the next pick?
 var can_pick: Callable
+# A first pick that this other ability takes goes on as that ability, while it is ready.
+var hands_over_to: Ability
 # (picked: Array[Vector2i]): does it, once every cell is picked.
 var use: Callable
 
 
-func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable, a_straight := false) -> void:
+func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reaches: Array[int], a_prompts: Array[String], a_can_pick: Callable, a_use: Callable, a_straight := false, a_hands_over_to: Ability = null) -> void:
 	title = a_title
 	cooldown = a_cooldown
 	min_reaches = a_min_reaches
@@ -29,3 +31,4 @@ func _init(a_title: String, a_cooldown: int, a_min_reaches: Array[int], a_reache
 	can_pick = a_can_pick
 	use = a_use
 	straight = a_straight
+	hands_over_to = a_hands_over_to

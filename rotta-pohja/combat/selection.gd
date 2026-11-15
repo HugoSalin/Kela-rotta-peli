@@ -69,11 +69,17 @@ func choose(chosen: Ability) -> void:
 	update()
 
 
-# A desk picked first goes on as the desk throw, with the desk as its first pick. Moving
-# offers a desk only while the throw is ready.
+# The ability a pick of the cell goes on with: the chosen one, or the one it hands a first
+# pick over to.
+func ability_for(cell: Vector2i) -> Ability:
+	var other := ability.hands_over_to
+	if picks.is_empty() and other and other.turns_until_ready == 0 and other.can_pick.call(picks, cell):
+		return other
+	return ability
+
+
 func pick(cell: Vector2i) -> void:
-	if picks.is_empty() and arena.is_throwable(cell):
-		ability = arena.player.desk_throw
+	ability = ability_for(cell)
 	picks.append(cell)
 	if picks.size() < ability.reaches.size():
 		update()
@@ -114,7 +120,7 @@ func range_cells() -> Array[Vector2i]:
 
 # The cells the player can pick next for the chosen ability.
 func action_cells() -> Array[Vector2i]:
-	return range_cells().filter(func(cell): return ability.can_pick.call(picks, cell))
+	return range_cells().filter(func(cell): return ability_for(cell).can_pick.call(picks, cell))
 
 
 # ---- Cursor ----
