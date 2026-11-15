@@ -15,6 +15,7 @@ var solid := true
 var obstacle := false
 var blocks_sight := false
 var throwable := false
+var shovable := false
 
 # ---- How it is shown ----
 
@@ -51,6 +52,13 @@ func has_warning() -> bool:
 # The line of the move it warns of.
 func warning_cells() -> Array[Vector2i]:
 	return []
+
+
+# ---- What the player does to it ----
+
+# The player shoves it toward that side.
+func shove(_side: int) -> void:
+	pass
 
 
 # ---- Its turn ----

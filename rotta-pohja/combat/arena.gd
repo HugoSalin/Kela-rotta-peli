@@ -24,6 +24,7 @@ signal combat_finished(won: bool)
 @export var desk_cells: Array[Vector2i] = []
 @export var pillar_cells: Array[Vector2i] = []
 @export var elevator_cells: Array[Vector2i] = []
+@export var chair_cells: Array[Vector2i] = []
 # Objective "reach a place": the player wins on this cell. NO_CELL if the stage has none.
 @export var goal_cell := HexGrid.NO_CELL
 @export var goal_name := ""
@@ -66,6 +67,8 @@ func _ready() -> void:
 		add(Pillar.new(cell))
 	for cell in elevator_cells:
 		add(Elevator.new(cell))
+	for cell in chair_cells:
+		add(Chair.new(cell))
 	for cell in rival_starts:
 		add_staggered(Rival.new(cell))
 	for cell in intern_starts:
@@ -162,6 +165,11 @@ func is_obstacle(cell: Vector2i) -> bool:
 func is_throwable(cell: Vector2i) -> bool:
 	var entity := entity_at(cell)
 	return entity != null and entity.throwable
+
+
+func is_shovable(cell: Vector2i) -> bool:
+	var entity := entity_at(cell)
+	return entity != null and entity.shovable
 
 
 func blocks_sight(cell: Vector2i) -> bool:

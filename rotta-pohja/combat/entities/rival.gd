@@ -6,6 +6,9 @@ extends Entity
 # A dash goes up to DASH_LENGTH cells in a straight line.
 const DASH_LENGTH := 2
 const START_MOTIVATION := 3
+# Turns it skips after a shove: when it was knocked against something, and otherwise.
+const KNOCK_STUN := 2
+const SHOVE_STUN := 1
 const COLOR := Color(0.85, 0.3, 0.3)
 const STUNNED_COLOR := Color(0.5, 0.5, 0.55)
 
@@ -20,6 +23,11 @@ var body_color := COLOR
 var stunned_turns := 0
 # The side its next dash goes; set when the dash warning starts. NO_SIDE before.
 var dash_side := HexGrid.NO_SIDE
+
+
+func _init(start_cell: Vector2i) -> void:
+	super(start_cell)
+	shovable = true
 
 
 # ---- Its turn ----
@@ -96,6 +104,27 @@ func dash_cells() -> Array[Vector2i]:
 
 
 # ---- What the player does to it ----
+
+# A shove pushes it one cell and stuns it. If something is behind it, it stays and is
+# knocked; a rival behind it is knocked too.
+func shove(side: int) -> void:
+	var behind := arena.grid.step(cell, side)
+	if arena.is_free(behind):
+		stun(SHOVE_STUN)
+		arena.move(self, behind)
+		return
+	var other := arena.rival_at(behind)
+	arena.block(self, behind)
+	knock()
+	if other:
+		other.knock()
+
+
+# Hitting something hard stuns it longer and costs motivation.
+func knock() -> void:
+	stun(KNOCK_STUN)
+	demotivate()
+
 
 func stun(turns: int) -> void:
 	stunned_turns = turns

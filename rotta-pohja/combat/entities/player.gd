@@ -3,9 +3,6 @@ extends Entity
 
 # The player's rat and what it can do on a turn: the abilities.
 
-# Turns a shoved rival skips: after hitting something behind it, and otherwise.
-const WALL_STUN := 2
-const SHOVE_STUN := 1
 const PAPER_MIN_RANGE := 2
 const PAPER_RANGE := 3
 const DESK_THROW_RANGE := 1
@@ -40,31 +37,14 @@ func color() -> Color:
 # The player's own cell is a pick: it waits, and the turn passes. A desk next to the player
 # is a pick too while the desk throw is ready: it starts the throw.
 func can_move_or_shove(_picked: Array[Vector2i], target: Vector2i) -> bool:
-	return target == cell or arena.is_free(target) or arena.rival_at(target) != null or (arena.is_throwable(target) and desk_throw.turns_until_ready == 0)
+	return target == cell or arena.is_free(target) or arena.is_shovable(target) or (arena.is_throwable(target) and desk_throw.turns_until_ready == 0)
 
 
 func move_or_shove(picked: Array[Vector2i]) -> void:
-	var rival := arena.rival_at(picked[0])
-	if rival:
-		shove(rival)
+	if arena.is_shovable(picked[0]):
+		arena.entity_at(picked[0]).shove(arena.grid.side_between(cell, picked[0]))
 	elif picked[0] != cell:
 		arena.move(self, picked[0])
-
-
-# Pushes the rival one cell straight away from the player and stuns it. If something is
-# behind it, it stays, is stunned longer and loses motivation; a rival behind it gets the same.
-func shove(rival: Rival) -> void:
-	var behind := arena.grid.step(rival.cell, arena.grid.side_between(cell, rival.cell))
-	if arena.is_free(behind):
-		rival.stun(SHOVE_STUN)
-		arena.move(rival, behind)
-		return
-	var other := arena.rival_at(behind)
-	arena.block(rival, behind)
-	for hit in [rival, other]:
-		if hit:
-			hit.stun(WALL_STUN)
-			hit.demotivate()
 
 
 # ---- Throw paperwork ----
@@ -92,16 +72,14 @@ func can_throw_desk(picked: Array[Vector2i], target: Vector2i) -> bool:
 	return target != arena.goal_cell and not arena.is_obstacle(target)
 
 
-# The desk moves to the cell. Landing on a rival, it breaks: the rival loses motivation and
-# is stunned as if shoved into a desk.
+# The desk moves to the cell. Landing on a rival, it breaks and knocks the rival.
 func throw_desk(picked: Array[Vector2i]) -> void:
 	var desk := arena.entity_at(picked[0])
 	var rival := arena.rival_at(picked[1])
 	arena.move(desk, picked[1])
 	if rival:
 		arena.remove(desk)
-		rival.stun(WALL_STUN)
-		rival.demotivate()
+		rival.knock()
 
 
 # ---- Dash ----

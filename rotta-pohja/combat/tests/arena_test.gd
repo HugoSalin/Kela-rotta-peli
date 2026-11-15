@@ -518,6 +518,7 @@ func test_several_rivals() -> void:
 	check("a stage's rivals start their dash countdowns a turn apart", arena.rivals().map(func(rival): return rival.turns_until_dash), [3, 4, 5, 3])
 	test_intern()
 	test_elevator()
+	test_chair()
 
 	setup(Vector2i(6, 1), [Vector2i(3, 2), Vector2i(4, 0)])
 	set_desks([Vector2i(4, 3)])
@@ -627,6 +628,24 @@ func test_elevator() -> void:
 	check("the preview brings no rival", arena.rivals().size(), 1)
 	press("E")
 	check("the next one comes once it is free", [elevator.turns_until_rival, arena.rivals().size()], [4, 2])
+
+
+func test_chair() -> void:
+	setup(Vector2i(4, 6), [Vector2i(4, 1), Vector2i(0, 0)])
+	arena.rivals()[0].stunned_turns = 99
+	arena.rivals()[1].stunned_turns = 99
+	var chair := Chair.new(Vector2i(4, 5))
+	arena.add(chair)
+	check("a chair can be shoved, and stands in the way like a desk", [Vector2i(4, 5) in arena.selection.action_cells(), arena.is_obstacle(Vector2i(4, 5))], [true, true])
+	press("WWE")
+	check("a shoved chair rolls until something stops it and costs a rival there motivation", [chair.cell, arena.rivals()[0].motivation, arena.player.cell], [Vector2i(4, 2), 2, Vector2i(4, 6)])
+	arena.player.cell = Vector2i(4, 3)
+	arena.selection.point = arena.selection.cell_to_point(Vector2i(4, 3))
+	press("WWE")
+	check("a chair that can't roll still hits the rival behind it", [chair.cell, arena.rivals()[0].motivation], [Vector2i(4, 2), 1])
+	arena.rivals()[0].cell = Vector2i(8, 6)
+	press("WWE")
+	check("without a rival it rolls to the edge", chair.cell, Vector2i(4, 0))
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.
