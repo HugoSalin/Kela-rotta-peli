@@ -6,6 +6,7 @@ extends Entity
 # Turns a shoved rival skips: after hitting a desk or the arena's edge, and otherwise.
 const WALL_STUN := 2
 const SHOVE_STUN := 1
+const PAPER_MIN_RANGE := 2
 const PAPER_RANGE := 3
 const DESK_THROW_RANGE := 2
 # The dash lands two cells away; dash_over() relies on it.
@@ -15,10 +16,10 @@ const DASH_COOLDOWN := 3
 # ---- Abilities ----
 
 var abilities: Array[Ability] = [
-	Ability.new("Move / Shove", 0, [1], [""], can_move_or_shove, move_or_shove),
-	Ability.new("Throw paperwork", 0, [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
-	Ability.new("Throw desk", 0, [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
-	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], ["Pick where you land."], can_dash, dash),
+	Ability.new("Move / Shove", 0, [0], [1], [""], can_move_or_shove, move_or_shove),
+	Ability.new("Throw paperwork", 0, [PAPER_MIN_RANGE], [PAPER_RANGE], ["Pick a rival."], can_throw_paper, throw_paper),
+	Ability.new("Throw desk", 0, [1, 1], [1, DESK_THROW_RANGE], ["Pick a desk next to you.", "Pick where it lands."], can_throw_desk, throw_desk),
+	Ability.new("Dash", DASH_COOLDOWN, [DASH_REACH], [DASH_REACH], ["Pick where you land."], can_dash, dash),
 ]
 var desk_throw := abilities[2]
 
@@ -96,11 +97,11 @@ func throw_paper(picked: Array[Vector2i]) -> void:
 
 # ---- Throw desk ----
 
-# First the desk, then where it lands. It can't land on a desk, a pillar, the goal or the player.
+# First the desk, then where it lands. It can't land on a desk, a pillar or the goal.
 func can_throw_desk(picked: Array[Vector2i], target: Vector2i) -> bool:
 	if picked.is_empty():
 		return arena.is_throwable(target)
-	return target != cell and target != arena.goal_cell and not arena.is_obstacle(target)
+	return target != arena.goal_cell and not arena.is_obstacle(target)
 
 
 # The desk moves to the cell. Landing on a rival, it breaks: the rival loses motivation and

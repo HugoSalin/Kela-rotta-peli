@@ -376,7 +376,7 @@ func test_throw_paper() -> void:
 	# The game's abilities have no cooldown; this gives one a cooldown to check the mechanism.
 	arena.player.abilities[1].cooldown = 3
 	press("2")
-	check("key 2 chooses the throw: range 3, only rivals in range", [arena.selection.ability.title, arena.selection.reach(), arena.selection.action_cells()], ["Throw paperwork", 3, [Vector2i(4, 2)]])
+	check("key 2 chooses the throw: range 2 to 3, only rivals in range", [arena.selection.ability.title, arena.selection.min_reach(), arena.selection.reach(), arena.selection.action_cells()], ["Throw paperwork", 2, 3, [Vector2i(4, 2)]])
 	check("the ability line marks it", arena.view.ability_label.text, "[1] Move / Shove   > [2] Throw paperwork   [3] Throw desk   [4] Dash\nPick a rival.")
 	press("1")
 	check("key 1 goes back", [arena.selection.ability.title, arena.selection.reach()], ["Move / Shove", 1])
@@ -401,7 +401,9 @@ func test_throw_paper() -> void:
 	set_pillars([])
 	set_desks([Vector2i(4, 3)])
 	check("a desk does not", arena.selection.action_cells(), [Vector2i(4, 2)])
-	check("the range is the cells within 3 in sight", [Vector2i(4, 2) in arena.selection.range_cells(), Vector2i(6, 5) in arena.selection.range_cells(), Vector2i(4, 1) in arena.selection.range_cells()], [true, true, false])
+	check("the range is the cells 2 to 3 away in sight", [Vector2i(4, 2) in arena.selection.range_cells(), Vector2i(6, 5) in arena.selection.range_cells(), Vector2i(4, 1) in arena.selection.range_cells(), Vector2i(4, 4) in arena.selection.range_cells()], [true, true, false, false])
+	arena.rivals()[0].cell = Vector2i(4, 4)
+	check("a rival next to the player is too near", arena.selection.action_cells(), [])
 	set_desks([])
 	set_pillars([Vector2i(4, 3)])
 	check("not those behind a pillar", Vector2i(4, 2) in arena.selection.range_cells(), false)
@@ -541,8 +543,8 @@ func test_several_rivals() -> void:
 	setup(Vector2i(0, 0), [Vector2i(0, 1), Vector2i(0, 3)])
 	set_desks([Vector2i(1, 0)])
 	arena.rivals()[0].stunned_turns = 99
-	press("2SSE")
-	check("a rival with no way around another queues up behind it", [arena.rivals()[0].motivation, arena.rivals()[1].cell], [2, Vector2i(0, 2)])
+	press("E")
+	check("a rival with no way around another queues up behind it", arena.rivals()[1].cell, Vector2i(0, 2))
 
 
 # Tries every sequence of moves and shoves (not picking desks), so it fails when a stage can't be won with them.

@@ -84,11 +84,17 @@ func reach() -> int:
 	return ability.reaches[picks.size()]
 
 
+# How near the player it may be. The cursor may still rest nearer.
+func min_reach() -> int:
+	return ability.min_reaches[picks.size()]
+
+
 # The cells the next pick reaches: in range and in sight of the player.
 func range_cells() -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in grid.cells:
-		if grid.distance(arena.player.cell, cell) <= reach() and arena.has_line_of_sight(arena.player.cell, cell):
+		var distance := grid.distance(arena.player.cell, cell)
+		if distance >= min_reach() and distance <= reach() and arena.has_line_of_sight(arena.player.cell, cell):
 			result.append(cell)
 	return result
 
